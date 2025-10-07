@@ -1,0 +1,4 @@
+(load "read_layers.lsp")
+(command "_.OPEN" "input.dwg")
+(command "_ReadLayers")
+(command "_.QUIT" "Y")
