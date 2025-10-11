@@ -4,6 +4,8 @@ import path from 'path';
 import axios from 'axios';
 import qs from 'querystring';
 
+console.log('✅ Axios version:', axios.VERSION || 'axios loaded');
+
 export default async function handler(req, res) {
   try {
     const clientId = process.env.APS_CLIENT_ID;
