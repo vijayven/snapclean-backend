@@ -1,9 +1,12 @@
 // File: /api/dwg_parser.js | with axios to call APS APIs and just uploading run.scr for now
 import fs from 'fs';
 import path from 'path';
+import qs from 'querystring';
+
+//--- Using non-standard direct path to get axios package since after 1.6.8 there's been issues with package resolution;
+//--- Consider downgrading axios to v1.6.8 if needed
 //import axios from 'axios';
 import axios from 'axios/dist/node/axios.cjs'
-import qs from 'querystring';
 
 console.log('✅ Axios version:', axios.VERSION || 'axios loaded');
 
@@ -17,6 +20,7 @@ export default async function handler(req, res) {
 
     // 1. Get access token
     const basicAuth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+/*
     const tokenResponse = await axios.post(
       'https://developer.api.autodesk.com/authentication/v1/authenticate',
       qs.stringify({
@@ -30,9 +34,59 @@ export default async function handler(req, res) {
         },
       }
     );
+*/
+    // === STEP 1: Get access token (with explicit error logging) ===
+    let tokenResponse;
+    try {
+      tokenResponse = await axios.post(
+        'https://developer.api.autodesk.com/authentication/v1/authenticate',
+        qs.stringify({
+          grant_type: 'client_credentials',
+          scope: 'data:read data:write bucket:create bucket:read',
+        }),
+        {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            Authorization: `Basic ${basicAuth}`,
+          },
+        }
+      );
 
+      // defensive check
+      if (!tokenResponse?.data?.access_token) {
+        console.error('❌ Access token response missing access_token:', tokenResponse.data);
+        throw new Error('No access_token in token response');
+      }
+    } catch (err) {
+      // helpful error logs for debugging: include HTTP status & body when available
+      console.error(
+        '❌ Access token request failed:',
+        err.response?.status ?? '(no status)',
+        err.response?.data ?? err.message
+      );
+      // rethrow so outer catch handles the response
+      throw err;
+    }
+    
     const accessToken = tokenResponse.data.access_token;
-    console.log('✔ Access token obtained');
+    console.log('✔ Step 1. Access token obtained');
+
+    // 1.5 Request temp bucket
+    await axios.post(
+      'https://developer.api.autodesk.com/oss/v2/buckets',
+      {
+        bucketKey: 'snapclean-temp-bucket-001',
+        policyKey: 'transient'
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    console.log('✔ Step 1.5 Temp storage bucket obtained');
 
     // 2. Request signed URL
     const signedUrlResponse = await axios.post(
@@ -46,9 +100,21 @@ export default async function handler(req, res) {
       }
     );
 
+    // defensive: ensure signed URL arrived
+    if (!signedUrlResponse?.data) {
+      const text = signedUrlResponse?.statusText ?? '(no status text)';
+      console.error('❌ Signed URL request returned no data:', signedUrlResponse.status, text);
+      throw new Error('Signed URL request returned no data');
+    }
+    if (!Array.isArray(signedUrlResponse.data.urls) || signedUrlResponse.data.urls.length === 0) {
+      console.error('❌ Signed URL request failed:', signedUrlResponse.status, signedUrlResponse.data);
+      throw new Error('Signed URL missing in response');
+    }
+
+
     const { uploadKey, urls } = signedUrlResponse.data;
     const signedPutUrl = urls[0];
-    console.log('✔ Signed URL received');
+    console.log('✔ Step 2. Signed URL received');
 
     // 3. Upload file using signed URL
     const fileBuffer = fs.readFileSync(localFilePath);
