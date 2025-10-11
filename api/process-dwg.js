@@ -1,7 +1,8 @@
 // File: /api/dwg_parser.js | with axios to call APS APIs and just uploading run.scr for now
 import fs from 'fs';
 import path from 'path';
-import axios from 'axios';
+//import axios from 'axios';
+import axios from 'axios/dist/node/axios.cjs'
 import qs from 'querystring';
 
 console.log('✅ Axios version:', axios.VERSION || 'axios loaded');
