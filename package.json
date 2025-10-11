@@ -3,6 +3,6 @@
     "axios": "^1.12.2"
   },
   "scripts": {
-    "vercel-build": "npm install --verbose && vercel build"
+    "vercel-build": "npm install --verbose"
   }
 }
