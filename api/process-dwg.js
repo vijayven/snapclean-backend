@@ -35,8 +35,10 @@ export default async function handler(req, res) {
     console.log('✅ Got access token');
 
     // STEP 2: Create bucket (if needed) — you can skip this if already created
+    // STEP 2: Create bucket (if needed) — you can skip this if already created
     const bucketKey = process.env.APS_BUCKET_KEY;
     console.log(`📦 Ensuring bucket "${bucketKey}" exists...`);
+
     await axios.put(
       `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/details`,
       {},
@@ -45,24 +47,36 @@ export default async function handler(req, res) {
       }
     ).catch(async (err) => {
       if (err.response && err.response.status === 404) {
-        await axios.post(
-          'https://developer.api.autodesk.com/oss/v2/buckets',
-          {
-            bucketKey,
-            policyKey: 'transient' // or 'temporary' or 'persistent'
-          },
-          {
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-              'Content-Type': 'application/json'
+        try {
+          await axios.post(
+            'https://developer.api.autodesk.com/oss/v2/buckets',
+            {
+              bucketKey,
+              policyKey: 'transient'
+            },
+            {
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+                'Content-Type': 'application/json'
+              }
             }
+          );
+          console.log('✅ Created bucket');
+        } catch (creationErr) {
+          if (
+            creationErr.response &&
+            creationErr.response.data?.reason === 'Bucket already exists'
+          ) {
+            console.log('ℹ️ Bucket already exists, continuing...');
+          } else {
+            throw creationErr;
           }
-        );
-        console.log('✅ Created bucket');
+        }
       } else {
         throw err;
       }
     });
+    
 
     // STEP 3: Upload file to bucket (presumes local file or base64 handling added)
     console.log('📤 Uploading file...');
