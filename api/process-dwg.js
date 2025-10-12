@@ -1,6 +1,7 @@
 // File: /api/dwg_parser.js | with axios to call APS APIs and just uploading run.scr for now
 //import fs from 'fs';
-import fs from 'fs/promises';
+//import fs from 'fs/promises';
+const fs = require('fs').promises;
 import path from 'path';
 import qs from 'querystring';
 
