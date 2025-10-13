@@ -101,9 +101,6 @@ module.exports = async function handler(req, res) {
     // STEP 4: Upload file to bucket 
     console.log('📤 Uploading file to signed S3 URL...');
 
-    const fileData = await fs.readFile(
-      path.join(process.cwd(), 'scripts', objectKey)
-    );
     const fileData = await fs.readFile(path.join(process.cwd(), 'scripts', objectKey));
 
     const { url: signedUrl, headers: signedHeaders } = uploadResp.data;
