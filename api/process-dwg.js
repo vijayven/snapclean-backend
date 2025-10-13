@@ -103,7 +103,7 @@ module.exports = async function handler(req, res) {
 
     const fileData = await fs.readFile(path.join(process.cwd(), 'scripts', objectKey));
 
-    const { url: signedUrl, headers: signedHeaders } = uploadResp.data;
+    //const { url: signedUrl, headers: signedHeaders } = uploadResp.data;
     await axios.put(signedUrl, fileData, { headers: signedHeaders });
     
     console.log('✅ File uploaded to APS');
