@@ -10,12 +10,13 @@ const qs = require('querystring');
 //--- Using non-standard direct path to get axios package since after 1.6.8 there's been issues with package resolution;
 //--- Consider downgrading axios to v1.6.8 if needed
 //import axios from 'axios';
-//import axios from 'axios/dist/node/axios.cjs' -- was working but changing it to be aligned with fs, path and qs imports
+//import axios from 'axios/dist/node/axios.cjs' // was working but changing it to be aligned with fs, path and qs imports
 const axios = require('axios');
 
 console.log('✅ Axios version:', axios.VERSION || 'axios loaded');
 
-export default async function handler(req, res) {
+//export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   console.log('✅ API Triggered');
 
   const { objectKey } = req.body;
