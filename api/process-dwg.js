@@ -81,7 +81,7 @@ module.exports = async function handler(req, res) {
         throw err;
       }
     });
-    
+    /*
     // Step 3: Get signed upload URL and headers from APS
     console.log('📥 Requesting signed S3 upload URL...');
 
@@ -99,7 +99,7 @@ module.exports = async function handler(req, res) {
     //const { url: signedUrl, headers: signedHeaders } = signedUrlResp.data;
     console.log('✅ Got signed upload URL from APS');
 
-    /*
+    
     // STEP 4: Upload file to bucket 
     console.log('📤 Uploading file to signed S3 URL...');
 
@@ -107,12 +107,13 @@ module.exports = async function handler(req, res) {
 
     //const { url: signedUrl, headers: signedHeaders } = uploadResp.data;
     await axios.put(signedUrl, fileData, { headers: signedHeaders });
-    */
+    
     
     //--DEBUG
     console.log('Signed URL:', signedUrl);
     console.log('Signed Headers:', signedHeaders);
     console.log('Full GET response:', signedUrlResp.data);
+    
 
     const { uploadKey, urls } = signedUrlResp.data;
 
@@ -144,7 +145,59 @@ module.exports = async function handler(req, res) {
 
     
     console.log('✅ File uploaded to APS');
+    */
+    // Step 3: Get signed upload URL and headers from APS
+    console.log('📥 Requesting signed S3 upload URL...');
 
+    const signedUrlResp = await axios.get(
+      `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${objectKey}/signeds3upload?parts=1`,
+      {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    console.log('✅ Got signed upload URL from APS');
+
+    // Extract the data FIRST
+    const { uploadKey, urls } = signedUrlResp.data;
+
+    // NOW you can log them if needed
+    console.log('Upload Key:', uploadKey);
+    console.log('Signed URL:', urls[0]);
+
+    // Step 4: Read file and upload to S3
+    console.log('📤 Uploading file to signed S3 URL...');
+    const fileData = await fs.readFile(path.join(process.cwd(), 'scripts', objectKey));
+
+    await axios.put(urls[0], fileData, {
+      headers: {
+        'Content-Type': 'application/octet-stream'
+      }
+    });
+
+    console.log('✅ File uploaded to S3');
+
+    // Step 5: Complete upload
+    console.log('🔒 Completing upload...');
+    await axios.post(
+      `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${objectKey}/signeds3upload`,
+      {
+        uploadKey: uploadKey,
+        size: fileData.length
+      },
+      {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    console.log('✅ Upload complete!');
+    
     return res.status(200).json({ success: true });
   } catch (err) {
     console.error('❌ Error in DWG upload flow:', err.response?.data || err.message);
