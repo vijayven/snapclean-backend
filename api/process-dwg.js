@@ -85,12 +85,15 @@ module.exports = async function handler(req, res) {
     // Step 3: Get signed upload URL and headers from APS
     console.log('📥 Requesting signed S3 upload URL...');
 
-    const signedUrlResp = await axios.post(
+   const signedUrlResp = await axios.post(
       `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${objectKey}/signeds3upload`,
-      {},
+      {
+        parts: 1
+      },
       {
         headers: {
-          Authorization: `Bearer ${accessToken}`
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
         }
       }
     );
