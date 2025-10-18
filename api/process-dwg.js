@@ -86,7 +86,7 @@ module.exports = async function handler(req, res) {
     console.log('📥 Requesting signed S3 upload URL...');
 
     const signedUrlResp = await axios.post(
-      `https://developer.api.autodesk.com/data/v2/buckets/${bucketKey}/objects/${objectKey}/signeds3upload`,
+      `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${objectKey}/signeds3upload`,
       {},
       {
         headers: {
