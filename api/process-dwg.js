@@ -98,6 +98,11 @@ module.exports = async function handler(req, res) {
     const { url: signedUrl, headers: signedHeaders } = signedUrlResp.data;
     console.log('✅ Got signed upload URL from APS');
 
+    //--DEBUG
+    console.log('Signed URL:', signedUrl);
+    console.log('Signed Headers:', signedHeaders);
+    console.log('Full GET response:', signedUrlResp.data);
+
     // STEP 4: Upload file to bucket 
     console.log('📤 Uploading file to signed S3 URL...');
 
