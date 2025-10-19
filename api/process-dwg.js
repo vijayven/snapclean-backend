@@ -207,9 +207,12 @@ module.exports = async (req, res) => {
     // Step 2: Read and upload DWG
     console.log('📤 Uploading DWG to OSS...');
     const fileData = await fs.readFile(path.join(process.cwd(), 'scripts', objectKey));
-    console.log('File size:', fileData.length, 'bytes');
-    const dwgUrl = await uploadToOSS(accessToken, bucketKey, objectKey, fileData);
-    console.log('DWG uploaded to:', dwgUrl);
+    await uploadToOSS(accessToken, bucketKey, objectKey, fileData);
+
+    // Create properly encoded URL for Design Automation
+    const encodedObjectKey = encodeURIComponent(objectKey);
+    const dwgUrl = `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodedObjectKey}`;
+    console.log('📤 DWG URL for DA:', dwgUrl);
 
     // Step 3: Get signed URLs for outputs
     console.log('🔗 Getting signed URLs...');
