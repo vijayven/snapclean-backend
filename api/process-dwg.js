@@ -204,16 +204,41 @@ module.exports = async (req, res) => {
     const accessToken = await getAccessToken();
     console.log('✅ Got access token');
 
-    // Step 2: Upload DWG
+    // Step 2: Verify bucket and upload DWG
+    console.log('📦 Verifying bucket exists...');
+    try {
+      await axios.get(
+        `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/details`,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+      console.log('✅ Bucket exists');
+    } catch (e) {
+      if (e.response?.status === 404) {
+        console.log('📦 Creating bucket...');
+        await axios.post(
+          'https://developer.api.autodesk.com/oss/v2/buckets',
+          { bucketKey, policyKey: 'temporary' },
+          { headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' } }
+        );
+        console.log('✅ Bucket created');
+      } else {
+        console.log('❌ Bucket check failed:', e.response?.status, e.response?.data);
+        throw e;
+      }
+    }
+
+    console.log('📤 Uploading DWG to OSS...');
     const fileData = await fs.readFile(path.join(process.cwd(), 'scripts', objectKey));
+    console.log('📄 File read, size:', fileData.length, 'bytes');
+
     await uploadToOSS(accessToken, bucketKey, objectKey, fileData);
-    
-    // Create properly encoded URL for Design Automation
+    console.log('✅ DWG uploaded to OSS');
+
     const encodedObjectKey = encodeURIComponent(objectKey);
     const dwgUrl = `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodedObjectKey}`;
     console.log('📤 DWG URL for DA:', dwgUrl);
 
-    // TEST: Try to download it immediately to verify it's accessible
+    // TEST: Verify file is accessible
     try {
       const testDownload = await axios.head(dwgUrl, {
         headers: { Authorization: `Bearer ${accessToken}` }
@@ -221,6 +246,7 @@ module.exports = async (req, res) => {
       console.log('✅ File is accessible, size:', testDownload.headers['content-length']);
     } catch (e) {
       console.error('❌ File NOT accessible:', e.response?.status, e.response?.statusText);
+      throw new Error('Uploaded file is not accessible');
     }
 
     // Step 3: Get signed URLs for outputs
