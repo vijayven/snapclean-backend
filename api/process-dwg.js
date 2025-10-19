@@ -204,15 +204,24 @@ module.exports = async (req, res) => {
     const accessToken = await getAccessToken();
     console.log('✅ Got access token');
 
-    // Step 2: Read and upload DWG
-    console.log('📤 Uploading DWG to OSS...');
+    // Step 2: Upload DWG
     const fileData = await fs.readFile(path.join(process.cwd(), 'scripts', objectKey));
     await uploadToOSS(accessToken, bucketKey, objectKey, fileData);
-
+    
     // Create properly encoded URL for Design Automation
     const encodedObjectKey = encodeURIComponent(objectKey);
     const dwgUrl = `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodedObjectKey}`;
     console.log('📤 DWG URL for DA:', dwgUrl);
+
+    // TEST: Try to download it immediately to verify it's accessible
+    try {
+      const testDownload = await axios.head(dwgUrl, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      console.log('✅ File is accessible, size:', testDownload.headers['content-length']);
+    } catch (e) {
+      console.error('❌ File NOT accessible:', e.response?.status, e.response?.statusText);
+    }
 
     // Step 3: Get signed URLs for outputs
     console.log('🔗 Getting signed URLs...');
