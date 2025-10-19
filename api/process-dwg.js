@@ -207,8 +207,9 @@ module.exports = async (req, res) => {
     // Step 2: Read and upload DWG
     console.log('📤 Uploading DWG to OSS...');
     const fileData = await fs.readFile(path.join(process.cwd(), 'scripts', objectKey));
+    console.log('File size:', fileData.length, 'bytes');
     const dwgUrl = await uploadToOSS(accessToken, bucketKey, objectKey, fileData);
-    console.log('✅ DWG uploaded to OSS');
+    console.log('DWG uploaded to:', dwgUrl);
 
     // Step 3: Get signed URLs for outputs
     console.log('🔗 Getting signed URLs...');
@@ -218,6 +219,21 @@ module.exports = async (req, res) => {
 
     // Step 4: Extract layers
     console.log('📥 Extracting layers via Design Automation...');
+    //-- DEBUG
+    const extractArgs = {
+      inputFile: {
+        url: dwgUrl,
+        headers: { Authorization: `Bearer ${accessToken}` }
+      },
+      outputLayers: {
+        verb: 'put',
+        url: layersOutputUrl
+      }
+    };
+
+    console.log('📋 ExtractLayers WorkItem args:', JSON.stringify(extractArgs, null, 2));
+    //---DEBUG
+
     await runWorkItem(accessToken, 'ExtractLayersActivity', {
       inputFile: {
         url: dwgUrl,

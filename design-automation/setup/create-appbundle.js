@@ -62,7 +62,7 @@ async function createAppBundle(bundleName) {
     // Step 3: Delete if exists
     console.log('\nStep 3: Attempting to delete existing AppBundle...');
     try {
-      const deleteUrl = `https://developer.api.autodesk.com/da/us-east/v3/appbundles/${appBundleId}`;
+      const deleteUrl = `https://developer.api.autodesk.com/da/us-east/v3/appbundles/${bundleName}`;
       console.log('DELETE URL:', deleteUrl);
       await axios.delete(deleteUrl, { 
         headers: { Authorization: `Bearer ${accessToken}` } 
@@ -93,8 +93,51 @@ async function createAppBundle(bundleName) {
       }
     );
     console.log('✅ AppBundle created');
-    
-    // Continue with rest...
+    console.log(`📦 API returned ID: ${createResp.data.id}`);
+
+    // Step 5: Upload ZIP
+    console.log('\nStep 5: Uploading ZIP...');
+    const uploadParams = createResp.data.uploadParameters;
+    const form = new FormData();
+
+    // Add all form fields EXCEPT 'file' first
+    Object.keys(uploadParams.formData).forEach(key => {
+      if (key !== 'file') {
+        form.append(key, uploadParams.formData[key]);
+      }
+    });
+
+    // Add file LAST
+    const fileStream = require('fs').createReadStream(
+      path.join(__dirname, `${bundleName}.zip`)
+    );
+    form.append('file', fileStream);
+
+    await axios.post(uploadParams.endpointURL, form, {
+      headers: form.getHeaders(),
+      maxContentLength: Infinity,
+      maxBodyLength: Infinity
+    });
+    console.log('✅ ZIP uploaded');
+
+    // Step 6: Create alias
+    console.log('\nStep 6: Creating alias...');
+    const aliasResp = await axios.post(
+      `https://developer.api.autodesk.com/da/us-east/v3/appbundles/${bundleName}/aliases`,
+      {
+        id: 'prod',
+        version: 1
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    console.log('✅ Alias created');
+    console.log(`📦 Alias ID: ${aliasResp.data.id}`);
+    console.log(`✨ AppBundle ready: ${appBundleId}\n`);
     
   } catch (error) {
     console.error('\n❌ ERROR in createAppBundle:');

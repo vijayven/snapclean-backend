@@ -26,22 +26,24 @@ async function getAccessToken() {
 async function createActivity(activityName, bundleName, params) {
   const accessToken = await getAccessToken();
   const activityId = `${NICKNAME}.${activityName}+prod`;
+  const fullActivityName = `${NICKNAME}.${activityName}`;
 
   console.log(`\n🔨 Creating Activity: ${activityName}`);
+  console.log(`📦 Expected Activity ID: ${activityId}`);
 
-  // Delete if exists
+  // Delete entire activity (all versions and aliases)
   try {
     await axios.delete(
-      `https://developer.api.autodesk.com/da/us-east/v3/activities/${activityId}`,
+      `https://developer.api.autodesk.com/da/us-east/v3/activities/${activityName}`,
       { headers: { Authorization: `Bearer ${accessToken}` } }
     );
-    console.log('🗑️  Deleted existing Activity');
+    console.log('🗑️  Deleted existing Activity and all versions');
   } catch (e) {
-    // Doesn't exist, that's fine
+    console.log('ℹ️  No existing Activity to delete');
   }
 
   // Create Activity
-  await axios.post(
+  const createResp = await axios.post(
     'https://developer.api.autodesk.com/da/us-east/v3/activities',
     {
       id: activityName,
@@ -64,10 +66,13 @@ async function createActivity(activityName, bundleName, params) {
       }
     }
   );
+  
   console.log('✅ Activity created');
+  console.log(`📦 API returned ID: ${createResp.data.id}`);
+  console.log(`📦 Using AppBundle: ${NICKNAME}.${bundleName}+prod`);
 
   // Create alias
-  await axios.post(
+  const aliasResp = await axios.post(
     `https://developer.api.autodesk.com/da/us-east/v3/activities/${activityName}/aliases`,
     {
       id: 'prod',
@@ -80,7 +85,9 @@ async function createActivity(activityName, bundleName, params) {
       }
     }
   );
+  
   console.log('✅ Alias created');
+  console.log(`📦 Alias ID: ${aliasResp.data.id}`);
   console.log(`✨ Activity ready: ${activityId}\n`);
 }
 
