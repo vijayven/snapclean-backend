@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ApplicationPackage 
+  SchemaVersion="1.0" 
+  AutodeskProduct="AutoCAD"
+  ProductCode="ACAD"
+  Name="RenameLayers" 
+  Description="Rename layers based on mapping file"
+  AppVersion="1.0">
+  <CompanyDetails Name="SnapClean" />
+  <Components Description="Rename layers">
+    <RuntimeRequirements 
+      OS="Win64" 
+      Platform="AutoCAD" 
+      SeriesMin="R25.0" 
+      SeriesMax="R25.2" />
+    <ComponentEntry 
+      AppName="RenameLayers" 
+      ModuleName="./Contents/rename-layers.lsp" 
+      AppDescription="Renames layers based on mapping.json"
+      LoadOnCommandInvocation="True"
+      LoadOnAutoCADStartup="True" />
+  </Components>
+</ApplicationPackage>

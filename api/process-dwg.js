@@ -1,209 +1,297 @@
-// File: /api/dwg_parser.js | with axios to call APS APIs and just uploading run.scr for now
-//import fs from 'fs';
-//import fs from 'fs/promises';
-const fs = require('fs').promises;
-//import path from 'path';
-const path = require('path');
-//import qs from 'querystring';
-const qs = require('querystring');
+// api/process-dwg.js - REPLACEMENT FROM CLAUDE
 
-//--- Using non-standard direct path to get axios package since after 1.6.8 there's been issues with package resolution;
-//--- Consider downgrading axios to v1.6.8 if needed
-//import axios from 'axios';
-//import axios from 'axios/dist/node/axios.cjs' // was working but changing it to be aligned with fs, path and qs imports
 const axios = require('axios');
+const fs = require('fs').promises;
+const path = require('path');
 
-console.log('✅ Axios version:', axios.VERSION || 'axios loaded');
+const CLIENT_ID = process.env.APS_CLIENT_ID;
+const CLIENT_SECRET = process.env.APS_CLIENT_SECRET;
+const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY;
+const NICKNAME = process.env.APS_NICKNAME || 'snapclean';
 
-//export default async function handler(req, res) {
-module.exports = async function handler(req, res) {
-  console.log('✅ API Triggered');
+async function getAccessToken() {
+  const response = await axios.post(
+    'https://developer.api.autodesk.com/authentication/v2/token',
+    new URLSearchParams({
+      client_id: CLIENT_ID,
+      client_secret: CLIENT_SECRET,
+      grant_type: 'client_credentials',
+      scope: 'data:read data:write data:create bucket:create code:all'
+    }),
+    {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+    }
+  );
+  return response.data.access_token;
+}
 
-  const { objectKey } = req.body;
-  if (!objectKey) return res.status(400).json({ error: 'Missing objectKey' });
+async function uploadToOSS(accessToken, bucketKey, objectKey, fileData) {
+  // Get signed upload URL
+  const signedUrlResp = await axios.get(
+    `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${objectKey}/signeds3upload?parts=1`,
+    {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      }
+    }
+  );
 
-  try {
-    // STEP 1: Get APS V2 access token (2-legged OAuth)
-    console.log('🔐 Requesting access token...');
-    const params = new URLSearchParams();
-    params.append('client_id', process.env.APS_CLIENT_ID);
-    params.append('client_secret', process.env.APS_CLIENT_SECRET);
-    params.append('grant_type', 'client_credentials');
-    params.append('scope', 'data:read data:write bucket:create bucket:read');
+  const { uploadKey, urls } = signedUrlResp.data;
 
-    const tokenResp = await axios.post(
-      'https://developer.api.autodesk.com/authentication/v2/token',
-      params,
-      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
-    );
+  // Upload to S3
+  await axios.put(urls[0], fileData, {
+    headers: {
+      'Content-Type': 'application/octet-stream'
+    }
+  });
 
-    const accessToken = tokenResp.data.access_token;
-    console.log('✅ Got access token');
+  // Complete upload
+  await axios.post(
+    `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${objectKey}/signeds3upload`,
+    {
+      uploadKey: uploadKey,
+      size: fileData.length
+    },
+    {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      }
+    }
+  );
 
-    // STEP 2: Create bucket (if needed) — you can skip this if already created
-    const bucketKey = process.env.APS_BUCKET_KEY;
-    console.log(`📦 Ensuring bucket "${bucketKey}" exists...`);
+  return `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${objectKey}`;
+}
 
-    await axios.put(
-      `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/details`,
-      {},
+async function getSignedUrl(accessToken, bucketKey, objectKey) {
+  const response = await axios.get(
+    `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${objectKey}/signeds3upload?parts=1`,
+    {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    }
+  );
+  return response.data.urls[0];
+}
+
+async function runWorkItem(accessToken, activityId, args) {
+  const workItem = await axios.post(
+    'https://developer.api.autodesk.com/da/us-east/v3/workitems',
+    {
+      activityId: `${NICKNAME}.${activityId}+prod`,
+      arguments: args
+    },
+    {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      }
+    }
+  );
+
+  const workItemId = workItem.data.id;
+  let status = 'pending';
+  let attempts = 0;
+  const maxAttempts = 60; // 2 minutes max
+
+  // Poll for completion
+  while ((status === 'pending' || status === 'inprogress') && attempts < maxAttempts) {
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    const statusResp = await axios.get(
+      `https://developer.api.autodesk.com/da/us-east/v3/workitems/${workItemId}`,
       {
         headers: { Authorization: `Bearer ${accessToken}` }
       }
-    ).catch(async (err) => {
-      if (err.response && err.response.status === 404) {
-        try {
-          await axios.post(
-            'https://developer.api.autodesk.com/oss/v2/buckets',
-            {
-              bucketKey,
-              policyKey: 'transient'
-            },
-            {
-              headers: {
-                Authorization: `Bearer ${accessToken}`,
-                'Content-Type': 'application/json'
-              }
-            }
-          );
-          console.log('✅ Created bucket');
-        } catch (creationErr) {
-          if (
-            creationErr.response &&
-            creationErr.response.data?.reason === 'Bucket already exists'
-          ) {
-            console.log('ℹ️ Bucket already exists, continuing...');
-          } else {
-            throw creationErr;
-          }
-        }
-      } else {
-        throw err;
-      }
-    });
-    /*
-    // Step 3: Get signed upload URL and headers from APS
-    console.log('📥 Requesting signed S3 upload URL...');
-
-   const signedUrlResp = await axios.get(
-      `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${objectKey}/signeds3upload?parts=1`,
-      {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json'
-        }
-      }
     );
+    status = statusResp.data.status;
+    attempts++;
+  }
 
-    
-    //const { url: signedUrl, headers: signedHeaders } = signedUrlResp.data;
-    console.log('✅ Got signed upload URL from APS');
+  if (status !== 'success') {
+    throw new Error(`WorkItem failed with status: ${status}`);
+  }
 
-    
-    // STEP 4: Upload file to bucket 
-    console.log('📤 Uploading file to signed S3 URL...');
+  return workItem.data;
+}
 
-    const fileData = await fs.readFile(path.join(process.cwd(), 'scripts', objectKey));
+/*
+async function callClaudeAPI(layers) {
+  const response = await axios.post(
+    'https://api.anthropic.com/v1/messages',
+    {
+      model: 'claude-sonnet-4-5-20250929',
+      max_tokens: 2000,
+      messages: [{
+        role: 'user',
+        content: `You are a CAD standards expert. Given these DWG layer names, map any non-standard names to standard names following these rules:
+- Layers should be UPPERCASE
+- Use hyphens not underscores  
+- Standard prefixes: A- (architecture), S- (structural), M- (mechanical), E- (electrical), P- (plumbing)
+- Remove version numbers or dates
+- Consolidate similar layers
 
-    //const { url: signedUrl, headers: signedHeaders } = uploadResp.data;
-    await axios.put(signedUrl, fileData, { headers: signedHeaders });
-    
-    
-    //--DEBUG
-    console.log('Signed URL:', signedUrl);
-    console.log('Signed Headers:', signedHeaders);
-    console.log('Full GET response:', signedUrlResp.data);
-    
+Layer names: ${JSON.stringify(layers)}
 
-    const { uploadKey, urls } = signedUrlResp.data;
-
-    console.log('📤 Uploading file to signed S3 URL...');
-    const fileData = await fs.readFile(path.join(process.cwd(), 'scripts', objectKey));
-
-    // Step 4: PUT to S3
-    await axios.put(urls[0], fileData, {
+Return ONLY a CSV format (no markdown, no explanation, no code blocks): oldName,newName
+Only include layers that need renaming. If no layers need renaming, return empty string.`
+      }]
+    },
+    {
       headers: {
-        'Content-Type': 'application/octet-stream'
+        'x-api-key': CLAUDE_API_KEY,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json'
       }
-    });
+    }
+  );
 
-    // Step 5: Complete upload
-    await axios.post(
-      `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${objectKey}/signeds3upload`,
-      {
-        uploadKey: uploadKey,
-        size: fileData.length
-      },
-      {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
+  return response.data.content[0].text.trim();
+}
+*/
 
+/*
+async function callOpenAIAPI(layers) {
+  const response = await axios.post(
+    'https://api.openai.com/v1/chat/completions',
+    {
+      model: 'gpt-4',
+      messages: [{
+        role: 'user',
+        content: `You are a CAD standards expert. Given these DWG layer names, map any non-standard names to standard names following these rules:
+- Layers should be UPPERCASE
+- Use hyphens not underscores  
+- Standard prefixes: A- (architecture), S- (structural), M- (mechanical), E- (electrical), P- (plumbing)
+- Remove version numbers or dates
+- Consolidate similar layers
 
-    
-    console.log('✅ File uploaded to APS');
-    */
-    // Step 3: Get signed upload URL and headers from APS
-    console.log('📥 Requesting signed S3 upload URL...');
+Layer names: ${JSON.stringify(layers)}
 
-    const signedUrlResp = await axios.get(
-      `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${objectKey}/signeds3upload?parts=1`,
-      {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
-
-    console.log('✅ Got signed upload URL from APS');
-
-    // Extract the data FIRST
-    const { uploadKey, urls } = signedUrlResp.data;
-
-    // NOW you can log them if needed
-    console.log('Upload Key:', uploadKey);
-    console.log('Signed URL:', urls[0]);
-
-    // Step 4: Read file and upload to S3
-    console.log('📤 Uploading file to signed S3 URL...');
-    const fileData = await fs.readFile(path.join(process.cwd(), 'scripts', objectKey));
-
-    await axios.put(urls[0], fileData, {
+Return ONLY a CSV format (no markdown, no explanation, no code blocks): oldName,newName
+Only include layers that need renaming. If no layers need renaming, return empty string.`
+      }]
+    },
+    {
       headers: {
-        'Content-Type': 'application/octet-stream'
+        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    }
+  );
+  return response.data.choices[0].message.content.trim();
+}
+*/
+
+//--Dummy layer renaming function for visible changes before fuzzy mapping
+async function callOpenAIAPI(layers) {
+  // TEST: Just add "SC-" prefix to all layers
+  console.log('🧪 TEST MODE: Adding SC- prefix to all layers');
+  
+  const mappings = layers.map(layer => `${layer},SC-${layer}`).join('\n');
+  
+  console.log('Generated mappings:', mappings);
+  return mappings;
+}
+
+module.exports = async (req, res) => {
+  try {
+    console.log('🚀 Starting DWG processing...');
+
+    const bucketKey = 'snapclean-temp-bucket-001';
+    const objectKey = req.body.objectKey || 'test.dwg';
+
+    // Step 1: Get access token
+    console.log('🔐 Getting access token...');
+    const accessToken = await getAccessToken();
+    console.log('✅ Got access token');
+
+    // Step 2: Read and upload DWG
+    console.log('📤 Uploading DWG to OSS...');
+    const fileData = await fs.readFile(path.join(process.cwd(), 'scripts', objectKey));
+    const dwgUrl = await uploadToOSS(accessToken, bucketKey, objectKey, fileData);
+    console.log('✅ DWG uploaded to OSS');
+
+    // Step 3: Get signed URLs for outputs
+    console.log('🔗 Getting signed URLs...');
+    const layersOutputUrl = await getSignedUrl(accessToken, bucketKey, `layers-${Date.now()}.json`);
+    const dwgOutputUrl = await getSignedUrl(accessToken, bucketKey, `output-${Date.now()}.dwg`);
+    console.log('✅ Signed URLs obtained');
+
+    // Step 4: Extract layers
+    console.log('📥 Extracting layers via Design Automation...');
+    await runWorkItem(accessToken, 'ExtractLayersActivity', {
+      inputFile: {
+        url: dwgUrl,
+        headers: { Authorization: `Bearer ${accessToken}` }
+      },
+      outputLayers: {
+        verb: 'put',
+        url: layersOutputUrl
       }
     });
+    console.log('✅ Layers extracted');
 
-    console.log('✅ File uploaded to S3');
+    // Step 5: Download layers
+    console.log('📥 Downloading layer data...');
+    const layersResp = await axios.get(layersOutputUrl);
+    const layers = layersResp.data;
+    console.log(`📋 Found ${layers.length} layers:`, layers);
 
-    // Step 5: Complete upload
-    console.log('🔒 Completing upload...');
-    await axios.post(
-      `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${objectKey}/signeds3upload`,
-      {
-        uploadKey: uploadKey,
-        size: fileData.length
+    // Step 6: Call Claude for mappings
+    console.log('🤖 Calling Claude API for layer mappings...');
+    //-- const mappingCSV = await callClaudeAPI(layers); -- Can change to Claude when you get Claude API key
+    const mappingCSV = await callOpenAIAPI(layers);
+    console.log('✅ Got mappings from Claude');
+    console.log('Mappings:', mappingCSV);
+
+    // Check if there are any mappings to apply
+    if (!mappingCSV || mappingCSV.length === 0) {
+      console.log('ℹ️  No layer renaming needed');
+      return res.json({
+        success: true,
+        originalLayers: layers,
+        mappings: 'No changes needed - all layers are standard',
+        message: 'All layers already follow standards'
+      });
+    }
+
+    // Step 7: Upload mapping CSV
+    console.log('📤 Uploading mapping file...');
+    await uploadToOSS(accessToken, bucketKey, `mapping-${Date.now()}.csv`, Buffer.from(mappingCSV));
+    console.log('✅ Mapping uploaded');
+
+    // Step 8: Rename layers
+    console.log('✏️  Renaming layers via Design Automation...');
+    await runWorkItem(accessToken, 'RenameLayersActivity', {
+      inputFile: {
+        url: dwgUrl,
+        headers: { Authorization: `Bearer ${accessToken}` }
       },
-      {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json'
-        }
+      mappingFile: {
+        url: `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/mapping-${Date.now()}.csv`,
+        headers: { Authorization: `Bearer ${accessToken}` }
+      },
+      outputFile: {
+        verb: 'put',
+        url: dwgOutputUrl
       }
-    );
+    });
+    console.log('✅ Layers renamed');
 
-    console.log('✅ Upload complete!');
-    
-    return res.status(200).json({ success: true });
-  } catch (err) {
-    console.error('❌ Error in DWG upload flow:', err.response?.data || err.message);
-    return res.status(500).json({
-      error: 'Failed to upload file to APS',
-      details: err.response?.data || err.message
+    res.json({
+      success: true,
+      originalLayers: layers,
+      mappings: mappingCSV,
+      outputUrl: dwgOutputUrl,
+      message: 'DWG processed successfully'
+    });
+
+  } catch (error) {
+    console.error('❌ Error in DWG processing:', error);
+    console.error('Full error:', error.response?.data || error.message);
+    res.status(500).json({
+      error: 'Failed to process DWG',
+      details: error.response?.data || error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
-}
+};

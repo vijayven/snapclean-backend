@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ApplicationPackage 
+  SchemaVersion="1.0" 
+  AutodeskProduct="AutoCAD"
+  ProductCode="ACAD"
+  Name="ExtractLayers" 
+  Description="Extract layer names from DWG"
+  AppVersion="1.0">
+  <CompanyDetails Name="SnapClean" />
+  <Components Description="Extract layer information">
+    <RuntimeRequirements 
+      OS="Win64" 
+      Platform="AutoCAD" 
+      SeriesMin="R25.0" 
+      SeriesMax="R25.2" />
+    <ComponentEntry 
+      AppName="ExtractLayers" 
+      ModuleName="./Contents/extract-layers.lsp" 
+      AppDescription="Extracts all layer names to JSON"
+      LoadOnCommandInvocation="True"
+      LoadOnAutoCADStartup="True" />
+  </Components>
+</ApplicationPackage>
