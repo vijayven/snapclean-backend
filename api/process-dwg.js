@@ -234,12 +234,13 @@ module.exports = async (req, res) => {
     await uploadToOSS(accessToken, bucketKey, objectKey, fileData);
     console.log('✅ DWG uploaded to OSS');
 
+    /* -- Replacing legacy OSS API URL with direct S3 download call
     const encodedObjectKey = encodeURIComponent(objectKey);
     const dwgUrl = `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodedObjectKey}`;
     console.log('📤 DWG URL for DA:', dwgUrl);
 
     // TEST: Verify file is accessible
-    /*
+  
     try {
       const testDownload = await axios.head(dwgUrl, {
         headers: { Authorization: `Bearer ${accessToken}` }
@@ -251,15 +252,27 @@ module.exports = async (req, res) => {
     }
     */
     
+    // Get signed S3 download URL (not the legacy OSS API URL)
+    const encodedObjectKey = encodeURIComponent(objectKey);
+    const downloadUrlResp = await axios.get(
+      `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodedObjectKey}/signeds3download`,
+      {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      }
+    );
+
+    const dwgUrl = downloadUrlResp.data.url;
+    console.log('📤 DWG URL for DA:', dwgUrl);
+
+    // TEST: Verify file is accessible
     try {
       const testDownload = await axios.get(dwgUrl, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-        maxContentLength: 1000, // Just get first 1KB
+        maxContentLength: 1000,
         responseType: 'arraybuffer'
       });
       console.log('✅ File is accessible, downloaded:', testDownload.data.byteLength, 'bytes');
     } catch (e) {
-      console.error('❌ File NOT accessible:', e.response?.status, e.response?.data?.toString());
+      console.error('❌ File NOT accessible:', e.response?.status);
       throw new Error('Uploaded file is not accessible');
     }
 
