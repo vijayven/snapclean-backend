@@ -277,7 +277,7 @@ module.exports = async (req, res) => {
       throw new Error('Uploaded file is not accessible');
     }
     */
-    console.log('⏭️  Skipping test, proceeding with Design Automation...');
+    console.log('⏭️  Skipping test download for now, proceeding with Design Automation...');
 
     // Step 3: Get signed URLs for outputs
     console.log('🔗 Getting signed URLs...');
@@ -287,6 +287,7 @@ module.exports = async (req, res) => {
 
     // Step 4: Extract layers
     console.log('📥 Extracting layers via Design Automation...');
+    /* -- Changing call to S3 from OSS URL for download ---
     //-- DEBUG
     const extractArgs = {
       inputFile: {
@@ -312,6 +313,21 @@ module.exports = async (req, res) => {
         url: layersOutputUrl
       }
     });
+    */
+ 
+    const extractArgs = {
+      inputFile: {
+        url: dwgUrl  // ← No headers!
+      },
+      outputLayers: {
+        verb: 'put',
+        url: layersOutputUrl
+      }
+    };
+
+    console.log('📋 ExtractLayers WorkItem args:', JSON.stringify(extractArgs, null, 2));
+    await runWorkItem(accessToken, 'ExtractLayersActivity', extractArgs);
+
     console.log('✅ Layers extracted');
 
     // Step 5: Download layers
