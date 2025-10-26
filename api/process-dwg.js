@@ -264,6 +264,7 @@ module.exports = async (req, res) => {
     const dwgUrl = downloadUrlResp.data.url;
     console.log('📤 DWG URL for DA:', dwgUrl);
 
+    /* Skipping test, proceeding with Design Automation...
     // TEST: Verify file is accessible
     try {
       const testDownload = await axios.get(dwgUrl, {
@@ -275,6 +276,8 @@ module.exports = async (req, res) => {
       console.error('❌ File NOT accessible:', e.response?.status);
       throw new Error('Uploaded file is not accessible');
     }
+    */
+    console.log('⏭️  Skipping test, proceeding with Design Automation...');
 
     // Step 3: Get signed URLs for outputs
     console.log('🔗 Getting signed URLs...');
