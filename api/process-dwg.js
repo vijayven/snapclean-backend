@@ -73,7 +73,7 @@ async function getSignedUrl(accessToken, bucketKey, objectKey) {
   );
   return response.data.urls[0];
 }
-
+/*
 async function runWorkItem(accessToken, activityId, args) {
   const workItem = await axios.post(
     'https://developer.api.autodesk.com/da/us-east/v3/workitems',
@@ -108,6 +108,47 @@ async function runWorkItem(accessToken, activityId, args) {
   }
 
   if (status !== 'success') {
+    throw new Error(`WorkItem failed with status: ${status}`);
+  }
+
+  return workItem.data;
+}
+*/
+async function runWorkItem(accessToken, activityId, args) {
+  const workItem = await axios.post(
+    'https://developer.api.autodesk.com/da/us-east/v3/workitems',
+    {
+      activityId: `${NICKNAME}.${activityId}+prod`,
+      arguments: args
+    },
+    {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      }
+    }
+  );
+
+  const workItemId = workItem.data.id;
+  let status = 'pending';
+  let attempts = 0;
+  const maxAttempts = 60;
+
+  while ((status === 'pending' || status === 'inprogress') && attempts < maxAttempts) {
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    const statusResp = await axios.get(
+      `https://developer.api.autodesk.com/da/us-east/v3/workitems/${workItemId}`,
+      {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      }
+    );
+    status = statusResp.data.status;
+    attempts++;
+  }
+
+  if (status !== 'success') {
+    // Log the report URL so we can see what failed
+    console.error('❌ WorkItem failed. Report URL:', statusResp.data.reportUrl);
     throw new Error(`WorkItem failed with status: ${status}`);
   }
 
