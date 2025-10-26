@@ -232,8 +232,7 @@ module.exports = async (req, res) => {
     console.log('📄 File read, size:', fileData.length, 'bytes');
 
     await uploadToOSS(accessToken, bucketKey, objectKey, fileData);
-    //console.log('✅ DWG uploaded to OSS');
-    console.log('✅ Upload completed:', JSON.stringify(completeResp.data, null, 2));
+    console.log('✅ DWG uploaded to OSS');
 
     const encodedObjectKey = encodeURIComponent(objectKey);
     const dwgUrl = `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodedObjectKey}`;
