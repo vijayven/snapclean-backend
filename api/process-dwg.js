@@ -232,13 +232,15 @@ module.exports = async (req, res) => {
     console.log('📄 File read, size:', fileData.length, 'bytes');
 
     await uploadToOSS(accessToken, bucketKey, objectKey, fileData);
-    console.log('✅ DWG uploaded to OSS');
+    //console.log('✅ DWG uploaded to OSS');
+    console.log('✅ Upload completed:', JSON.stringify(completeResp.data, null, 2));
 
     const encodedObjectKey = encodeURIComponent(objectKey);
     const dwgUrl = `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodedObjectKey}`;
     console.log('📤 DWG URL for DA:', dwgUrl);
 
     // TEST: Verify file is accessible
+    /*
     try {
       const testDownload = await axios.head(dwgUrl, {
         headers: { Authorization: `Bearer ${accessToken}` }
@@ -246,6 +248,19 @@ module.exports = async (req, res) => {
       console.log('✅ File is accessible, size:', testDownload.headers['content-length']);
     } catch (e) {
       console.error('❌ File NOT accessible:', e.response?.status, e.response?.statusText);
+      throw new Error('Uploaded file is not accessible');
+    }
+    */
+    
+    try {
+      const testDownload = await axios.get(dwgUrl, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        maxContentLength: 1000, // Just get first 1KB
+        responseType: 'arraybuffer'
+      });
+      console.log('✅ File is accessible, downloaded:', testDownload.data.byteLength, 'bytes');
+    } catch (e) {
+      console.error('❌ File NOT accessible:', e.response?.status, e.response?.data?.toString());
       throw new Error('Uploaded file is not accessible');
     }
 
