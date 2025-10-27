@@ -116,6 +116,14 @@ async function runWorkItem(accessToken, activityId, args) {
 */
 
 async function runWorkItem(accessToken, activityId, args) {
+  //--DEBUG
+  console.log('\n🔍 WorkItem Debug Info:');
+  console.log('NICKNAME:', NICKNAME);
+  console.log('activityId param:', activityId);
+  console.log('Full activityId being sent:', `${NICKNAME}.${activityId}+prod`);
+  console.log('Arguments:', JSON.stringify(args, null, 2));
+  console.log('');
+  
   const workItem = await axios.post(
     'https://developer.api.autodesk.com/da/us-east/v3/workitems',
     {

@@ -1,6 +1,11 @@
-; Simplest possible test - just write a file
+(vl-load-com)
 (setq output (open "layers.json" "w"))
-(princ "[\"TEST-LAYER-1\",\"TEST-LAYER-2\"]" output)
-(close output)
-(princ "\nTest script completed\n")
-(princ)
+(if output
+  (progn
+    (princ "[\"TEST-1\",\"TEST-2\"]" output)
+    (close output)
+    (princ "\nSuccess: layers.json created")
+  )
+  (princ "\nError: Could not create layers.json")
+)
+(command "_.QUIT" "N")
