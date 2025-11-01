@@ -68,6 +68,9 @@ async function getSignedUrl(accessToken, bucketKey, objectKey) {
   const response = await axios.get(
     `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${objectKey}/signeds3upload?parts=1`,
     {
+      minutesExpiration: 10  // Change from 2 to 10 minutes
+    },
+    {
       headers: { Authorization: `Bearer ${accessToken}` }
     }
   );
