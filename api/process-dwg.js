@@ -124,7 +124,12 @@ async function runWorkItem(accessToken, activityId, args) {
 
   //-- Seems like workItem has original creation response not the final completed WorkItem with fresh URLs
   //return workItem.data; 
-  return statusResp.data;
+  //return statusResp.data;
+  //-- Spreading all the properties returned in statusResp with "..." and adding args
+  return {
+    ...statusResp.data,
+    arguments: args
+  };
 }
 
 /*
