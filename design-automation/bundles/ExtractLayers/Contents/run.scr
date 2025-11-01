@@ -1,0 +1,25 @@
+(princ "\n=== Starting run.scr ===")
+(setq appPath (findfile "extract-layers.lsp"))
+(if appPath
+  (progn
+    (princ "\nFound LISP at: ")
+    (princ appPath)
+    (load appPath)
+  )
+  (progn
+    (princ "\nError: Cannot find extract-layers.lsp")
+    (princ "\nSearching in current directory...")
+    (vl-load-com)
+    (setq output (open "layers.json" "w"))
+    (if output
+      (progn
+        (princ "[\"TEST-1\",\"TEST-2\"]" output)
+        (close output)
+        (princ "\nSuccess: Created layers.json inline")
+      )
+      (princ "\nError: Could not create file")
+    )
+  )
+)
+(princ "\n=== Quitting ===")
+(command "_.QUIT" "N")

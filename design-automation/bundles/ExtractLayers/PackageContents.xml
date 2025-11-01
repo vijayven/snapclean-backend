@@ -15,9 +15,7 @@
       SeriesMax="R25.2" />
     <ComponentEntry 
       AppName="ExtractLayers" 
-      ModuleName="./Contents/extract-layers.lsp" 
-      AppDescription="Extracts all layer names to JSON"
-      LoadOnCommandInvocation="True"
-      LoadOnAutoCADStartup="True" />
+      ModuleName="./Contents/run.scr" 
+      AppDescription="Extracts all layer names to JSON" />
   </Components>
 </ApplicationPackage>

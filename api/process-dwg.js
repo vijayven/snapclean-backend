@@ -73,47 +73,7 @@ async function getSignedUrl(accessToken, bucketKey, objectKey) {
   );
   return response.data.urls[0];
 }
-/*
-async function runWorkItem(accessToken, activityId, args) {
-  const workItem = await axios.post(
-    'https://developer.api.autodesk.com/da/us-east/v3/workitems',
-    {
-      activityId: `${NICKNAME}.${activityId}+prod`,
-      arguments: args
-    },
-    {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json'
-      }
-    }
-  );
 
-  const workItemId = workItem.data.id;
-  let status = 'pending';
-  let attempts = 0;
-  const maxAttempts = 60; // 2 minutes max
-
-  // Poll for completion
-  while ((status === 'pending' || status === 'inprogress') && attempts < maxAttempts) {
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    const statusResp = await axios.get(
-      `https://developer.api.autodesk.com/da/us-east/v3/workitems/${workItemId}`,
-      {
-        headers: { Authorization: `Bearer ${accessToken}` }
-      }
-    );
-    status = statusResp.data.status;
-    attempts++;
-  }
-
-  if (status !== 'success') {
-    throw new Error(`WorkItem failed with status: ${status}`);
-  }
-
-  return workItem.data;
-}
-*/
 
 async function runWorkItem(accessToken, activityId, args) {
   //--DEBUG
@@ -162,7 +122,9 @@ async function runWorkItem(accessToken, activityId, args) {
     throw new Error(`WorkItem failed with status: ${status}`);
   }
 
-  return workItem.data;
+  //-- Seems like workItem has original creation response not the final completed WorkItem with fresh URLs
+  //return workItem.data; 
+  return statusResp.data;
 }
 
 /*
@@ -338,33 +300,6 @@ module.exports = async (req, res) => {
 
     // Step 4: Extract layers
     console.log('📥 Extracting layers via Design Automation...');
-    /* -- Changing call to S3 from OSS URL for download ---
-    //-- DEBUG
-    const extractArgs = {
-      inputFile: {
-        url: dwgUrl,
-        headers: { Authorization: `Bearer ${accessToken}` }
-      },
-      outputLayers: {
-        verb: 'put',
-        url: layersOutputUrl
-      }
-    };
-
-    console.log('📋 ExtractLayers WorkItem args:', JSON.stringify(extractArgs, null, 2));
-    //---DEBUG
-
-    await runWorkItem(accessToken, 'ExtractLayersActivity', {
-      inputFile: {
-        url: dwgUrl,
-        headers: { Authorization: `Bearer ${accessToken}` }
-      },
-      outputLayers: {
-        verb: 'put',
-        url: layersOutputUrl
-      }
-    });
-    */
  
     const extractArgs = {
       inputFile: {
@@ -377,13 +312,21 @@ module.exports = async (req, res) => {
     };
 
     console.log('📋 ExtractLayers WorkItem args:', JSON.stringify(extractArgs, null, 2));
-    await runWorkItem(accessToken, 'ExtractLayersActivity', extractArgs);
+    //--- Need to access the result from workItem execution to get download URLs etc.
+    //await runWorkItem(accessToken, 'ExtractLayersActivity', extractArgs);
+    const workItemResult = await runWorkItem(accessToken, 'ExtractLayersActivity', extractArgs);
 
     console.log('✅ Layers extracted');
 
     // Step 5: Download layers
+    /*
     console.log('📥 Downloading layer data...');
     const layersResp = await axios.get(layersOutputUrl);
+    const layers = layersResp.data;
+    console.log(`📋 Found ${layers.length} layers:`, layers);
+    */
+    console.log('📥 Downloading layer data...');
+    const layersResp = await axios.get(workItemResult.arguments.outputLayers.url);
     const layers = layersResp.data;
     console.log(`📋 Found ${layers.length} layers:`, layers);
 
