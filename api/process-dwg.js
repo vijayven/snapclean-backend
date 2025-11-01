@@ -315,6 +315,9 @@ module.exports = async (req, res) => {
     //--- Need to access the result from workItem execution to get download URLs etc.
     //await runWorkItem(accessToken, 'ExtractLayersActivity', extractArgs);
     const workItemResult = await runWorkItem(accessToken, 'ExtractLayersActivity', extractArgs);
+    
+    console.log('📦 WorkItem result keys:', Object.keys(workItemResult));
+    console.log('📦 WorkItem result:', JSON.stringify(workItemResult, null, 2));
 
     console.log('✅ Layers extracted');
 
