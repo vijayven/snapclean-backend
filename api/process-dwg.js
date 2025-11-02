@@ -65,20 +65,15 @@ async function uploadToOSS(accessToken, bucketKey, objectKey, fileData) {
 }
 
 async function getSignedUrl(accessToken, bucketKey, objectKey) {
-  /*
+  
   const response = await axios.get(
-    `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${objectKey}/signeds3upload?parts=1`,
+    `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${objectKey}/signeds3upload?parts=1&minutesExpiration=10`,
     {
       headers: { Authorization: `Bearer ${accessToken}` }
     }
   );
-  */
-  const response = await axios.get(
-    `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${objectKey}/signeds3download?minutesExpiration=10`,
-    {
-      headers: { Authorization: `Bearer ${accessToken}` }
-    }
-  );
+  
+  
   return response.data.urls[0];
 }
 
