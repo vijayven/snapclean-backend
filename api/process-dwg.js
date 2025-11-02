@@ -340,7 +340,8 @@ module.exports = async (req, res) => {
     const layersResp = await axios.get(layersOutputUrl);
     const layers = layersResp.data;
     console.log(`📋 Found ${layers.length} layers:`, layers);
-    
+    */
+   
     console.log('📥 Downloading layer data...');
     //-- trying to get a new download URL: 
     //const layersResp = await axios.get(workItemResult.arguments.outputLayers.url);
@@ -350,7 +351,8 @@ module.exports = async (req, res) => {
     );
     const layersResp = await axios.get(layersDownloadResp.data.url);
 
-    */
+    
+    /*
     console.log('📥 Downloading layer data...');
 
     // Extract the object key from the output URL
@@ -369,6 +371,7 @@ module.exports = async (req, res) => {
 
     // Download the actual file
     const layersResp = await axios.get(layersDownloadResp.data.url);
+    */
     const layers = layersResp.data;
 
     console.log(`✅ Found ${layers.length} layers:`, layers);
