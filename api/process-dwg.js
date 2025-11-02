@@ -351,20 +351,27 @@ module.exports = async (req, res) => {
     const layersResp = await axios.get(layersDownloadResp.data.url);
 
     */
+    console.log('📥 Downloading layer data...');
 
-    console.log('📥 Downloading layer data from report...');
-    console.log('📊 Report URL:', workItemResult.reportUrl);
+    // Extract the object key from the output URL
+    const outputUrl = workItemResult.arguments.outputLayers.url;
+    const objectKey = 'signed-url-uploads/' + outputUrl.match(/signed-url-uploads\/([a-f0-9-]+)/)?.[1];
 
-    // The report contains the extracted layer data
-    const layersResp = await axios.get(workItemResult.reportUrl);
+    console.log('🔑 Object key:', objectKey);
 
-    console.log('📥 Report data type:', typeof layersResp.data);
-    console.log('📥 Report data:', JSON.stringify(layersResp.data, null, 2));
+    // Get signed download URL from OSS API
+    const layersDownloadResp = await axios.get(
+      `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodeURIComponent(objectKey)}/signeds3download`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
 
+    console.log('📥 Download URL obtained');
+
+    // Download the actual file
+    const layersResp = await axios.get(layersDownloadResp.data.url);
     const layers = layersResp.data;
 
-    
-    console.log(`📋 Found ${layers.length} layers:`, layers);
+    console.log(`✅ Found ${layers.length} layers:`, layers);
 
     // Step 6: Call Claude for mappings
     console.log('🤖 Calling Claude API for layer mappings...');
