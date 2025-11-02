@@ -355,13 +355,13 @@ module.exports = async (req, res) => {
 
     // Extract the object key from the output URL
     const outputUrl = workItemResult.arguments.outputLayers.url;
-    const objectKey = 'signed-url-uploads/' + outputUrl.match(/signed-url-uploads\/([a-f0-9-]+)/)?.[1];
+    const layersObjectKey = 'signed-url-uploads/' + outputUrl.match(/signed-url-uploads\/([a-f0-9-]+)/)?.[1];
 
-    console.log('🔑 Object key:', objectKey);
+    console.log('🔑 Layers object key:', layersObjectKey);
 
     // Get signed download URL from OSS API
     const layersDownloadResp = await axios.get(
-      `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodeURIComponent(objectKey)}/signeds3download`,
+      `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodeURIComponent(layersObjectKey)}/signeds3download`,
       { headers: { Authorization: `Bearer ${accessToken}` } }
     );
 
