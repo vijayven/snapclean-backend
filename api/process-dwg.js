@@ -340,9 +340,9 @@ module.exports = async (req, res) => {
     const layersResp = await axios.get(layersOutputUrl);
     const layers = layersResp.data;
     console.log(`📋 Found ${layers.length} layers:`, layers);
-    */
+    
     console.log('📥 Downloading layer data...');
-    //-- trying to get a new download UR: 
+    //-- trying to get a new download URL: 
     //const layersResp = await axios.get(workItemResult.arguments.outputLayers.url);
     const layersDownloadResp = await axios.get(
       `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodeURIComponent(layersKey)}/signeds3download`,
@@ -350,7 +350,20 @@ module.exports = async (req, res) => {
     );
     const layersResp = await axios.get(layersDownloadResp.data.url);
 
+    */
+
+    console.log('📥 Downloading layer data from report...');
+    console.log('📊 Report URL:', workItemResult.reportUrl);
+
+    // The report contains the extracted layer data
+    const layersResp = await axios.get(workItemResult.reportUrl);
+
+    console.log('📥 Report data type:', typeof layersResp.data);
+    console.log('📥 Report data:', JSON.stringify(layersResp.data, null, 2));
+
     const layers = layersResp.data;
+
+    
     console.log(`📋 Found ${layers.length} layers:`, layers);
 
     // Step 6: Call Claude for mappings
