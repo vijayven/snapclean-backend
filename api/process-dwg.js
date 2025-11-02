@@ -276,14 +276,14 @@ module.exports = async (req, res) => {
     
     // Get signed S3 download URL (not the legacy OSS API URL)
     const encodedObjectKey = encodeURIComponent(objectKey);
-    const downloadUrlResp = await axios.get(
+    const dwgDownloadUrlResp = await axios.get(
       `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodedObjectKey}/signeds3download`,
       {
         headers: { Authorization: `Bearer ${accessToken}` }
       }
     );
 
-    const dwgUrl = downloadUrlResp.data.url;
+    const dwgUrl = dwgDownloadUrlResp.data.url;
     console.log('📤 DWG URL for DA:', dwgUrl);
 
     /* Skipping test, proceeding with Design Automation...
@@ -303,7 +303,11 @@ module.exports = async (req, res) => {
 
     // Step 3: Get signed URLs for outputs
     console.log('🔗 Getting signed URLs...');
-    const layersOutputUrl = await getSignedUrl(accessToken, bucketKey, `layers-${Date.now()}.json`);
+    //-- Saving the layersKey for retrieving later
+    //const layersOutputUrl = await getSignedUrl(accessToken, bucketKey, `layers-${Date.now()}.json`);
+    const layersKey = `layers-${Date.now()}.json`;
+    const layersOutputUrl = await getSignedUrl(accessToken, bucketKey, layersKey);
+
     const dwgOutputUrl = await getSignedUrl(accessToken, bucketKey, `output-${Date.now()}.dwg`);
     console.log('✅ Signed URLs obtained');
 
@@ -338,7 +342,14 @@ module.exports = async (req, res) => {
     console.log(`📋 Found ${layers.length} layers:`, layers);
     */
     console.log('📥 Downloading layer data...');
-    const layersResp = await axios.get(workItemResult.arguments.outputLayers.url);
+    //-- trying to get a new download UR: 
+    //const layersResp = await axios.get(workItemResult.arguments.outputLayers.url);
+    const layersDownloadResp = await axios.get(
+      `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodeURIComponent(layersKey)}/signeds3download`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+    const layersResp = await axios.get(layersDownloadResp.data.url);
+
     const layers = layersResp.data;
     console.log(`📋 Found ${layers.length} layers:`, layers);
 
