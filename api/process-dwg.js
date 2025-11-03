@@ -340,8 +340,7 @@ module.exports = async (req, res) => {
     const layersResp = await axios.get(layersOutputUrl);
     const layers = layersResp.data;
     console.log(`📋 Found ${layers.length} layers:`, layers);
-    */
-   
+    
     console.log('📥 Downloading layer data...');
     //-- trying to get a new download URL: 
     //const layersResp = await axios.get(workItemResult.arguments.outputLayers.url);
@@ -351,31 +350,22 @@ module.exports = async (req, res) => {
     );
     const layersResp = await axios.get(layersDownloadResp.data.url);
 
-    
-    /*
+    */
     console.log('📥 Downloading layer data...');
+    console.log('🔑 Using original layers key:', layersKey);
 
-    // Extract the object key from the output URL
-    const outputUrl = workItemResult.arguments.outputLayers.url;
-    const layersObjectKey = 'signed-url-uploads/' + outputUrl.match(/signed-url-uploads\/([a-f0-9-]+)/)?.[1];
-
-    console.log('🔑 Layers object key:', layersObjectKey);
-
-    // Get signed download URL from OSS API
-    const layersDownloadResp = await axios.get(
-      `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodeURIComponent(layersObjectKey)}/signeds3download`,
-      { headers: { Authorization: `Bearer ${accessToken}` } }
+    // Download directly using the key we created earlier
+    const layersResp = await axios.get(
+      `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodeURIComponent(layersKey)}`,
+      { 
+        headers: { Authorization: `Bearer ${accessToken}` },
+        responseType: 'json'
+      }
     );
 
-    console.log('📥 Download URL obtained');
-
-    // Download the actual file
-    const layersResp = await axios.get(layersDownloadResp.data.url);
-    */
     const layers = layersResp.data;
-
     console.log(`✅ Found ${layers.length} layers:`, layers);
-
+    
     // Step 6: Call Claude for mappings
     console.log('🤖 Calling Claude API for layer mappings...');
     //-- const mappingCSV = await callClaudeAPI(layers); -- Can change to Claude when you get Claude API key
