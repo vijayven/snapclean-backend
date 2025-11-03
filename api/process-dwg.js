@@ -351,17 +351,22 @@ module.exports = async (req, res) => {
     const layersResp = await axios.get(layersDownloadResp.data.url);
 
     */
+    
     console.log('📥 Downloading layer data...');
     console.log('🔑 Using original layers key:', layersKey);
 
-    // Download directly using the key we created earlier
-    const layersResp = await axios.get(
-      `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodeURIComponent(layersKey)}`,
-      { 
-        headers: { Authorization: `Bearer ${accessToken}` },
-        responseType: 'json'
-      }
+    // Get signed S3 download URL
+    const layersDownloadResp = await axios.get(
+      `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodeURIComponent(layersKey)}/signeds3download`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
     );
+
+    console.log('📥 Got download URL');
+
+    // Download from S3
+    const layersResp = await axios.get(layersDownloadResp.data.url, {
+      responseType: 'json'
+    });
 
     const layers = layersResp.data;
     console.log(`✅ Found ${layers.length} layers:`, layers);
