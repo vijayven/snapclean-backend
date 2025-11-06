@@ -84,9 +84,9 @@ async function runWorkItem(accessToken, activityId, args) {
   console.log('\n🔍 WorkItem Debug Info:');
   console.log('NICKNAME:', NICKNAME);
   console.log('activityId param:', activityId);
-  console.log('Full activityId being sent:', `${NICKNAME}.${activityId}+prod`);
-  console.log('Arguments:', JSON.stringify(args, null, 2));
-  console.log('');
+  //console.log('Full activityId being sent:', `${NICKNAME}.${activityId}+prod`);
+  //console.log('Arguments:', JSON.stringify(args, null, 2));
+  //console.log('');
   
   const workItem = await axios.post(
     'https://developer.api.autodesk.com/da/us-east/v3/workitems',
@@ -259,7 +259,7 @@ module.exports = async (req, res) => {
     /* -- Replacing legacy OSS API URL with direct S3 download call
     const encodedObjectKey = encodeURIComponent(objectKey);
     const dwgUrl = `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodedObjectKey}`;
-    console.log('📤 DWG URL for DA:', dwgUrl);
+    //console.log('📤 DWG URL for DA:', dwgUrl);
 
     // TEST: Verify file is accessible
   
@@ -324,7 +324,7 @@ module.exports = async (req, res) => {
       }
     };
 
-    console.log('📋 ExtractLayers WorkItem args:', JSON.stringify(extractArgs, null, 2));
+    //console.log('📋 ExtractLayers WorkItem args:', JSON.stringify(extractArgs, null, 2));
     //--- Need to access the result from workItem execution to get download URLs etc.
     //await runWorkItem(accessToken, 'ExtractLayersActivity', extractArgs);
     const workItemResult = await runWorkItem(accessToken, 'ExtractLayersActivity', extractArgs);
@@ -352,6 +352,7 @@ module.exports = async (req, res) => {
 
     */
     
+    /* -- trying to list all files in bucket since all the URLs used till now seem to not point to this object ---
     console.log('📥 Downloading layer data...');
     console.log('🔑 Using original layers key:', layersKey);
 
@@ -370,6 +371,49 @@ module.exports = async (req, res) => {
 
     const layers = layersResp.data;
     console.log(`✅ Found ${layers.length} layers:`, layers);
+    --------------------------*/
+    
+    console.log('📥 Finding uploaded layers file...');
+
+    // List recent objects in the bucket
+    const listResp = await axios.get(
+      `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects?limit=50&startsAt=signed-url-uploads`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+
+    console.log(`📦 Found ${listResp.data.items.length} objects in bucket`);
+
+    // Find the most recent layers file (should be the one we just created)
+    const layersFile = listResp.data.items
+      .filter(item => item.objectKey.includes('layers') || item.size < 10000) // Small JSON files
+      .sort((a, b) => new Date(b.lastModifiedDate) - new Date(a.lastModifiedDate))[0];
+
+    if (!layersFile) {
+      throw new Error('Could not find uploaded layers.json file');
+    }
+
+    console.log('📄 Found layers file:', layersFile.objectKey);
+
+    // Download it
+    const layersDownloadResp = await axios.get(
+      `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodeURIComponent(layersFile.objectKey)}/signeds3download`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+
+    const layersResp = await axios.get(layersDownloadResp.data.url, {
+      responseType: 'json'
+    });
+
+    const layers = layersResp.data;
+    console.log(`✅ Found ${layers.length} layers:`, layers);
+
+    // EXIT HERE FOR NOW - test extraction first
+    return res.json({
+      success: true,
+      message: 'Layer extraction test complete',
+      layers: layers,
+      layersCount: layers.length
+    });
     
     // Step 6: Call Claude for mappings
     console.log('🤖 Calling Claude API for layer mappings...');
