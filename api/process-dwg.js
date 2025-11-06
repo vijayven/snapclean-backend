@@ -352,7 +352,7 @@ module.exports = async (req, res) => {
 
     */
     
-    /* -- trying to list all files in bucket since all the URLs used till now seem to not point to this object ---
+    /* -------  trying to list all files in bucket since all the URLs used till now seem to not point to this object ---
     console.log('📥 Downloading layer data...');
     console.log('🔑 Using original layers key:', layersKey);
 
@@ -377,7 +377,7 @@ module.exports = async (req, res) => {
 
     // List recent objects in the bucket
     const listResp = await axios.get(
-      `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects?limit=50&startsAt=signed-url-uploads`,
+      `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects?limit=50`,
       { headers: { Authorization: `Bearer ${accessToken}` } }
     );
 
