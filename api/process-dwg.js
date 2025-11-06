@@ -380,13 +380,21 @@ module.exports = async (req, res) => {
       `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects?limit=50`,
       { headers: { Authorization: `Bearer ${accessToken}` } }
     );
-
     console.log(`📦 Found ${listResp.data.items.length} objects in bucket`);
 
-    // Find the most recent layers file (should be the one we just created)
-    const layersFile = listResp.data.items
-      .filter(item => item.objectKey.includes('layers') || item.size < 10000) // Small JSON files
-      .sort((a, b) => new Date(b.lastModifiedDate) - new Date(a.lastModifiedDate))[0];
+    // Log ALL objects regardless of filter
+    console.log('📋 ALL files in bucket:');
+    listResp.data.items.forEach(item => {
+      console.log(`  - Key: ${item.objectKey}`);
+      console.log(`    Size: ${item.size} bytes`);
+      console.log(`    Modified: ${item.lastModifiedDate}`);
+    });
+
+    // Now try the filter
+    const candidateFiles = listResp.data.items
+      .filter(item => item.objectKey.includes('layers') || item.size < 10000);
+
+    console.log(`\n🔍 After filter: ${candidateFiles.length} candidates`);
 
     if (!layersFile) {
       throw new Error('Could not find uploaded layers.json file');
