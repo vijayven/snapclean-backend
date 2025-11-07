@@ -74,10 +74,14 @@ async function getSignedUrl(accessToken, bucketKey, objectKey) {
   );
   
   
-  return response.data.urls[0];
+  //return response.data.urls[0];
+  //--- Return objectKey and uploadKey in addition to URL for downloads later   
+  return {
+    uploadUrl: response.data.urls[0],
+    uploadKey: response.data.uploadKey,
+    objectKey: objectKey  // The original key you passed in
+  };
 }
-
-
 
 async function runWorkItem(accessToken, activityId, args) {
   //--DEBUG
@@ -256,24 +260,6 @@ module.exports = async (req, res) => {
     await uploadToOSS(accessToken, bucketKey, objectKey, fileData);
     console.log('✅ DWG uploaded to OSS');
 
-    /* -- Replacing legacy OSS API URL with direct S3 download call
-    const encodedObjectKey = encodeURIComponent(objectKey);
-    const dwgUrl = `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodedObjectKey}`;
-    //console.log('📤 DWG URL for DA:', dwgUrl);
-
-    // TEST: Verify file is accessible
-  
-    try {
-      const testDownload = await axios.head(dwgUrl, {
-        headers: { Authorization: `Bearer ${accessToken}` }
-      });
-      console.log('✅ File is accessible, size:', testDownload.headers['content-length']);
-    } catch (e) {
-      console.error('❌ File NOT accessible:', e.response?.status, e.response?.statusText);
-      throw new Error('Uploaded file is not accessible');
-    }
-    */
-    
     // Get signed S3 download URL (not the legacy OSS API URL)
     const encodedObjectKey = encodeURIComponent(objectKey);
     const dwgDownloadUrlResp = await axios.get(
@@ -306,7 +292,8 @@ module.exports = async (req, res) => {
     //-- Saving the layersKey for retrieving later
     //const layersOutputUrl = await getSignedUrl(accessToken, bucketKey, `layers-${Date.now()}.json`);
     const layersKey = `layers-${Date.now()}.json`;
-    const layersOutputUrl = await getSignedUrl(accessToken, bucketKey, layersKey);
+    //const layersOutputUrl = await getSignedUrl(accessToken, bucketKey, layersKey);
+    const layersSignedData = await getSignedUrl(accessToken, bucketKey, layersKey);
 
     const dwgOutputUrl = await getSignedUrl(accessToken, bucketKey, `output-${Date.now()}.dwg`);
     console.log('✅ Signed URLs obtained');
@@ -315,12 +302,10 @@ module.exports = async (req, res) => {
     console.log('📥 Extracting layers via Design Automation...');
  
     const extractArgs = {
-      inputFile: {
-        url: dwgUrl  // ← No headers!
-      },
+      inputFile: { url: dwgUrl },
       outputLayers: {
         verb: 'put',
-        url: layersOutputUrl
+        url: layersSignedData.uploadUrl
       }
     };
 
@@ -335,76 +320,9 @@ module.exports = async (req, res) => {
     console.log('✅ Layers extracted');
 
     // Step 5: Download layers
-    /*
-    console.log('📥 Downloading layer data...');
-    const layersResp = await axios.get(layersOutputUrl);
-    const layers = layersResp.data;
-    console.log(`📋 Found ${layers.length} layers:`, layers);
     
-    console.log('📥 Downloading layer data...');
-    //-- trying to get a new download URL: 
-    //const layersResp = await axios.get(workItemResult.arguments.outputLayers.url);
     const layersDownloadResp = await axios.get(
       `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodeURIComponent(layersKey)}/signeds3download`,
-      { headers: { Authorization: `Bearer ${accessToken}` } }
-    );
-    const layersResp = await axios.get(layersDownloadResp.data.url);
-
-    */
-    
-    /* -------  trying to list all files in bucket since all the URLs used till now seem to not point to this object ---
-    console.log('📥 Downloading layer data...');
-    console.log('🔑 Using original layers key:', layersKey);
-
-    // Get signed S3 download URL
-    const layersDownloadResp = await axios.get(
-      `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodeURIComponent(layersKey)}/signeds3download`,
-      { headers: { Authorization: `Bearer ${accessToken}` } }
-    );
-
-    console.log('📥 Got download URL');
-
-    // Download from S3
-    const layersResp = await axios.get(layersDownloadResp.data.url, {
-      responseType: 'json'
-    });
-
-    const layers = layersResp.data;
-    console.log(`✅ Found ${layers.length} layers:`, layers);
-    --------------------------*/
-    
-    console.log('📥 Finding uploaded layers file...');
-
-    // List recent objects in the bucket
-    const listResp = await axios.get(
-      `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects?limit=50`,
-      { headers: { Authorization: `Bearer ${accessToken}` } }
-    );
-    console.log(`📦 Found ${listResp.data.items.length} objects in bucket`);
-
-    // Log ALL objects regardless of filter
-    console.log('📋 ALL files in bucket:');
-    listResp.data.items.forEach(item => {
-      console.log(`  - Key: ${item.objectKey}`);
-      console.log(`    Size: ${item.size} bytes`);
-      console.log(`    Modified: ${item.lastModifiedDate}`);
-    });
-
-    // Now try the filter
-    const candidateFiles = listResp.data.items
-      .filter(item => item.objectKey.includes('layers') || item.size < 10000);
-
-    console.log(`\n🔍 After filter: ${candidateFiles.length} candidates`);
-
-    if (!layersFile) {
-      throw new Error('Could not find uploaded layers.json file');
-    }
-
-    console.log('📄 Found layers file:', layersFile.objectKey);
-
-    // Download it
-    const layersDownloadResp = await axios.get(
-      `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodeURIComponent(layersFile.objectKey)}/signeds3download`,
       { headers: { Authorization: `Bearer ${accessToken}` } }
     );
 
