@@ -326,25 +326,8 @@ module.exports = async (req, res) => {
 
     // Try to download -- DEBUG
     console.log('📥 Attempting download with key:', layersKey);
-    console.log('📋 Listing bucket to verify file exists...');
-    const listResp = await axios.get(
-      `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects?limit=50`,
-      { headers: { Authorization: `Bearer ${accessToken}` } }
-    );
+    /*
 
-    console.log(`📦 Found ${listResp.data.items.length} objects:`);
-    listResp.data.items.forEach(item => {
-      console.log(`  - ${item.objectKey} (${item.size} bytes)`);
-    });
-
-    console.log('\n🔍 Looking for:', layersKey);
-    const found = listResp.data.items.find(item => item.objectKey === layersKey);
-    console.log('Found in bucket?', found ? 'YES' : 'NO');
-
-    if (found) {
-      console.log('📄 Actual object key:', found.objectKey);
-    }
-    
     const layersDownloadResp = await axios.get(
       `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodeURIComponent(layersKey)}/signeds3download`,
       { headers: { Authorization: `Bearer ${accessToken}` } }
@@ -356,6 +339,38 @@ module.exports = async (req, res) => {
 
     const layers = layersResp.data;
     console.log(`✅ Found ${layers.length} layers:`, layers);
+    */
+
+    console.log('📊 Checking report for actual upload location...');
+    const reportResp = await axios.get(workItemResult.reportUrl);
+    const reportText = reportResp.data;
+
+    // Extract the actual upload URL from report
+    const uploadMatch = reportText.match(/Uploading '.*?layers\.json'.*?url - '(https:\/\/[^']+)'/s);
+    if (uploadMatch) {
+      const actualUploadUrl = uploadMatch[1];
+      console.log('📤 Found upload URL in report');
+      
+      // Extract object key: signed-url-uploads/{uuid}
+      const keyMatch = actualUploadUrl.match(/signed-url-uploads\/([a-f0-9-]+)/);
+      if (keyMatch) {
+        const actualObjectKey = `signed-url-uploads/${keyMatch[1]}`;
+        console.log('🔑 Actual object key:', actualObjectKey);
+        
+        // Download using the ACTUAL key
+        const layersDownloadResp = await axios.get(
+          `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodeURIComponent(actualObjectKey)}/signeds3download`,
+          { headers: { Authorization: `Bearer ${accessToken}` } }
+        );
+        
+        const layersResp = await axios.get(layersDownloadResp.data.url, {
+          responseType: 'json'
+        });
+        
+        const layers = layersResp.data;
+        console.log(`✅ Found ${layers.length} layers:`, layers);
+      }
+    }
 
     // EXIT HERE FOR NOW - test extraction first
     return res.json({
