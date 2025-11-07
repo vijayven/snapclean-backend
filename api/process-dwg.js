@@ -324,8 +324,27 @@ module.exports = async (req, res) => {
    // After WorkItem completes
     console.log('🔍 Original layersKey:', layersKey);
 
-    // Try to download
+    // Try to download -- DEBUG
     console.log('📥 Attempting download with key:', layersKey);
+    console.log('📋 Listing bucket to verify file exists...');
+    const listResp = await axios.get(
+      `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects?limit=50`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+
+    console.log(`📦 Found ${listResp.data.items.length} objects:`);
+    listResp.data.items.forEach(item => {
+      console.log(`  - ${item.objectKey} (${item.size} bytes)`);
+    });
+
+    console.log('\n🔍 Looking for:', layersKey);
+    const found = listResp.data.items.find(item => item.objectKey === layersKey);
+    console.log('Found in bucket?', found ? 'YES' : 'NO');
+
+    if (found) {
+      console.log('📄 Actual object key:', found.objectKey);
+    }
+    
     const layersDownloadResp = await axios.get(
       `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodeURIComponent(layersKey)}/signeds3download`,
       { headers: { Authorization: `Bearer ${accessToken}` } }
