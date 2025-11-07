@@ -321,6 +321,11 @@ module.exports = async (req, res) => {
 
     // Step 5: Download layers
     
+   // After WorkItem completes
+    console.log('🔍 Original layersKey:', layersKey);
+
+    // Try to download
+    console.log('📥 Attempting download with key:', layersKey);
     const layersDownloadResp = await axios.get(
       `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodeURIComponent(layersKey)}/signeds3download`,
       { headers: { Authorization: `Bearer ${accessToken}` } }
