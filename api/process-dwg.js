@@ -345,7 +345,7 @@ module.exports = async (req, res) => {
     const reportResp = await axios.get(workItemResult.reportUrl);
     const reportText = reportResp.data;
 
-    const uploadMatch = reportText.match(/Uploading '.*?layers\.json'.*?url - '(https:\/\/[^'?]+)/s);
+    const uploadMatch = reportText.match(/Uploading '.*?layers\.json'.*?url - '([^']+)'/s);
     if (uploadMatch) {
       let s3Url = uploadMatch[1];
       console.log('📤 Found S3 upload URL:', s3Url);
