@@ -64,6 +64,7 @@ async function uploadToOSS(accessToken, bucketKey, objectKey, fileData) {
   return `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${objectKey}`;
 }
 
+/*
 async function getSignedUrl(accessToken, bucketKey, objectKey) {
   
   const response = await axios.get(
@@ -80,6 +81,26 @@ async function getSignedUrl(accessToken, bucketKey, objectKey) {
     uploadUrl: response.data.urls[0],
     uploadKey: response.data.uploadKey,
     objectKey: objectKey  // The original key you passed in
+  };
+}
+*/
+async function getSignedUrl(accessToken, bucketKey, objectKey) {
+  const response = await axios.post(
+    `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodeURIComponent(objectKey)}/signed`,
+    {
+      minutesExpiration: 10
+    },
+    {
+      headers: { 
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      }
+    }
+  );
+  
+  return {
+    uploadUrl: response.data.signedUrl,
+    objectKey: objectKey
   };
 }
 
