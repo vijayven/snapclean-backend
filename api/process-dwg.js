@@ -341,34 +341,37 @@ module.exports = async (req, res) => {
     console.log(`✅ Found ${layers.length} layers:`, layers);
     */
 
-    console.log('📊 Checking report for actual upload location...');
+    console.log('📊 Parsing report for S3 upload URL...');
     const reportResp = await axios.get(workItemResult.reportUrl);
     const reportText = reportResp.data;
 
-    // Extract the actual upload URL from report
-    const uploadMatch = reportText.match(/Uploading '.*?layers\.json'.*?url - '(https:\/\/[^']+)'/s);
+    const uploadMatch = reportText.match(/Uploading '.*?layers\.json'.*?url - '(https:\/\/[^'?]+)/s);
     if (uploadMatch) {
-      const actualUploadUrl = uploadMatch[1];
-      console.log('📤 Found upload URL in report');
+      let s3Url = uploadMatch[1];
+      console.log('📤 Found S3 upload URL:', s3Url);
       
-      // Extract object key: signed-url-uploads/{uuid}
-      const keyMatch = actualUploadUrl.match(/signed-url-uploads\/([a-f0-9-]+)/);
-      if (keyMatch) {
-        const actualObjectKey = `signed-url-uploads/${keyMatch[1]}`;
-        console.log('🔑 Actual object key:', actualObjectKey);
-        
-        // Download using the ACTUAL key
-        const layersDownloadResp = await axios.get(
-          `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodeURIComponent(actualObjectKey)}/signeds3download`,
-          { headers: { Authorization: `Bearer ${accessToken}` } }
-        );
-        
-        const layersResp = await axios.get(layersDownloadResp.data.url, {
-          responseType: 'json'
+      // The upload URL can be converted to a download URL by removing query params and using GET
+      // S3 URLs are accessible without auth for a limited time
+      console.log('🔄 Attempting direct S3 download...');
+      
+      try {
+        const layersResp = await axios.get(s3Url, {
+          responseType: 'json',
+          timeout: 10000
         });
         
         const layers = layersResp.data;
-        console.log(`✅ Found ${layers.length} layers:`, layers);
+        console.log(`✅ SUCCESS! Found ${layers.length} layers:`, layers);
+        
+        // SUCCESS - use this data
+        return res.json({
+          success: true,
+          message: 'Layer extraction complete',
+          layers: layers,
+          layersCount: layers.length
+        });
+      } catch (e) {
+        console.log('❌ Direct S3 download failed:', e.response?.status, e.message);
       }
     }
 
