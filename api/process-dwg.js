@@ -345,6 +345,7 @@ module.exports = async (req, res) => {
     const reportResp = await axios.get(workItemResult.reportUrl);
     const reportText = reportResp.data;
 
+    /*
     const uploadMatch = reportText.match(/Uploading '.*?layers\.json'.*?url - '([^']+)'/s);
     if (uploadMatch) {
       let s3Url = uploadMatch[1];
@@ -373,6 +374,18 @@ module.exports = async (req, res) => {
       } catch (e) {
         console.log('❌ Direct S3 download failed:', e.response?.status, e.message);
       }
+    }
+    */
+    const uploadMatch = reportText.match(/signed-url-uploads\/([a-f0-9-]+)/);
+    if (uploadMatch) {
+      const uuid = uploadMatch[1];
+      console.log('🔑 Extracted UUID:', uuid);
+      
+      const listResp = await axios.get(
+        `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects?startsAt=signed-url-uploads/${uuid}`,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+      console.log('📦 Found objects:', listResp.data.items);
     }
 
     // EXIT HERE FOR NOW - test extraction first
