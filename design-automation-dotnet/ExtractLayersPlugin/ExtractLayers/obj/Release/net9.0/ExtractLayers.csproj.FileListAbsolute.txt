@@ -1,0 +1,13 @@
+/Users/vijayv/Documents/SnapClean repo/snapclean-backend/design-automation-dotnet/ExtractLayersPlugin/ExtractLayers/obj/Release/net9.0/ExtractLayers.csproj.AssemblyReference.cache
+/Users/vijayv/Documents/SnapClean repo/snapclean-backend/design-automation-dotnet/ExtractLayersPlugin/ExtractLayers/obj/Release/net9.0/ExtractLayers.GeneratedMSBuildEditorConfig.editorconfig
+/Users/vijayv/Documents/SnapClean repo/snapclean-backend/design-automation-dotnet/ExtractLayersPlugin/ExtractLayers/obj/Release/net9.0/ExtractLayers.AssemblyInfoInputs.cache
+/Users/vijayv/Documents/SnapClean repo/snapclean-backend/design-automation-dotnet/ExtractLayersPlugin/ExtractLayers/obj/Release/net9.0/ExtractLayers.AssemblyInfo.cs
+/Users/vijayv/Documents/SnapClean repo/snapclean-backend/design-automation-dotnet/ExtractLayersPlugin/ExtractLayers/obj/Release/net9.0/ExtractLayers.csproj.CoreCompileInputs.cache
+/Users/vijayv/Documents/SnapClean repo/snapclean-backend/design-automation-dotnet/ExtractLayersPlugin/ExtractLayers/obj/Release/net9.0/ExtractLayers.sourcelink.json
+/Users/vijayv/Documents/SnapClean repo/snapclean-backend/design-automation-dotnet/ExtractLayersPlugin/ExtractLayers/bin/Release/net9.0/ExtractLayers.deps.json
+/Users/vijayv/Documents/SnapClean repo/snapclean-backend/design-automation-dotnet/ExtractLayersPlugin/ExtractLayers/bin/Release/net9.0/ExtractLayers.dll
+/Users/vijayv/Documents/SnapClean repo/snapclean-backend/design-automation-dotnet/ExtractLayersPlugin/ExtractLayers/bin/Release/net9.0/ExtractLayers.pdb
+/Users/vijayv/Documents/SnapClean repo/snapclean-backend/design-automation-dotnet/ExtractLayersPlugin/ExtractLayers/obj/Release/net9.0/ExtractLayers.dll
+/Users/vijayv/Documents/SnapClean repo/snapclean-backend/design-automation-dotnet/ExtractLayersPlugin/ExtractLayers/obj/Release/net9.0/refint/ExtractLayers.dll
+/Users/vijayv/Documents/SnapClean repo/snapclean-backend/design-automation-dotnet/ExtractLayersPlugin/ExtractLayers/obj/Release/net9.0/ExtractLayers.pdb
+/Users/vijayv/Documents/SnapClean repo/snapclean-backend/design-automation-dotnet/ExtractLayersPlugin/ExtractLayers/obj/Release/net9.0/ref/ExtractLayers.dll

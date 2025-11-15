@@ -333,7 +333,10 @@ module.exports = async (req, res) => {
     //console.log('📋 ExtractLayers WorkItem args:', JSON.stringify(extractArgs, null, 2));
     //--- Need to access the result from workItem execution to get download URLs etc.
     //await runWorkItem(accessToken, 'ExtractLayersActivity', extractArgs);
-    const workItemResult = await runWorkItem(accessToken, 'ExtractLayersActivity', extractArgs);
+    
+    //--- Changing from script driven activity to DLL driven activity ExtractLayersActivity --> ExtractLayersDLLActivity
+    //const workItemResult = await runWorkItem(accessToken, 'ExtractLayersActivity', extractArgs);
+    const workItemResult = await runWorkItem(accessToken, 'ExtractLayersDLLActivity', extractArgs);
     
     console.log('📦 WorkItem result keys:', Object.keys(workItemResult));
     console.log('📦 WorkItem result:', JSON.stringify(workItemResult, null, 2));

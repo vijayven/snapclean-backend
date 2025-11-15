@@ -1,0 +1,154 @@
+{
+  "version": 3,
+  "targets": {
+    "net9.0": {
+      "AutoCAD.NET.Core/25.0.0": {
+        "type": "package",
+        "dependencies": {
+          "AutoCAD.NET.Model": "[25.0.0]"
+        },
+        "compile": {
+          "lib/net8.0/AcCoreMgd.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net8.0/AcCoreMgd.dll": {
+            "related": ".xml"
+          }
+        }
+      },
+      "AutoCAD.NET.Model/25.0.0": {
+        "type": "package",
+        "compile": {
+          "lib/net8.0/AcDbMgd.dll": {
+            "related": ".xml"
+          },
+          "lib/net8.0/acdbmgdbrep.dll": {}
+        },
+        "runtime": {
+          "lib/net8.0/AcDbMgd.dll": {
+            "related": ".xml"
+          },
+          "lib/net8.0/acdbmgdbrep.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "AutoCAD.NET.Core/25.0.0": {
+      "sha512": "jPwsZgVs+4xqXtMLWJjgb4WSSzbb7YGbgn/BqT7LGPRthQb/93CmRZyuSgfjjSK8EgL+YsfRuRYVvYNGHrw3TA==",
+      "type": "package",
+      "path": "autocad.net.core/25.0.0",
+      "hasTools": true,
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "LICENSE.txt",
+        "adsk.xml",
+        "autocad.net.core.25.0.0.nupkg.sha512",
+        "autocad.net.core.nuspec",
+        "lib/net8.0/AcCoreMgd.dll",
+        "lib/net8.0/AcCoreMgd.xml",
+        "tools/install.ps1"
+      ]
+    },
+    "AutoCAD.NET.Model/25.0.0": {
+      "sha512": "XGKd/R/MZ5oHFEMOtxHh9L307ss6XSnW4S0JSC3UkRjvdgv8rTygXkqz+vGoRoUl8IWU/ooskfVT/qOikFfteA==",
+      "type": "package",
+      "path": "autocad.net.model/25.0.0",
+      "hasTools": true,
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "LICENSE.txt",
+        "adsk.xml",
+        "autocad.net.model.25.0.0.nupkg.sha512",
+        "autocad.net.model.nuspec",
+        "lib/net8.0/AcDbMgd.dll",
+        "lib/net8.0/AcDbMgd.xml",
+        "lib/net8.0/AcDbMgdBrep.xml",
+        "lib/net8.0/acdbmgdbrep.dll",
+        "tools/install.ps1"
+      ]
+    }
+  },
+  "projectFileDependencyGroups": {
+    "net9.0": [
+      "AutoCAD.NET.Core >= 25.0.0",
+      "AutoCAD.NET.Model >= 25.0.0"
+    ]
+  },
+  "packageFolders": {
+    "/Users/vijayv/.nuget/packages/": {}
+  },
+  "project": {
+    "version": "1.0.0",
+    "restore": {
+      "projectUniqueName": "/Users/vijayv/Documents/SnapClean repo/snapclean-backend/design-automation-dotnet/ExtractLayersPlugin/ExtractLayers/ExtractLayers.csproj",
+      "projectName": "ExtractLayers",
+      "projectPath": "/Users/vijayv/Documents/SnapClean repo/snapclean-backend/design-automation-dotnet/ExtractLayersPlugin/ExtractLayers/ExtractLayers.csproj",
+      "packagesPath": "/Users/vijayv/.nuget/packages/",
+      "outputPath": "/Users/vijayv/Documents/SnapClean repo/snapclean-backend/design-automation-dotnet/ExtractLayersPlugin/ExtractLayers/obj/",
+      "projectStyle": "PackageReference",
+      "configFilePaths": [
+        "/Users/vijayv/.nuget/NuGet/NuGet.Config"
+      ],
+      "originalTargetFrameworks": [
+        "net9.0"
+      ],
+      "sources": {
+        "https://api.nuget.org/v3/index.json": {}
+      },
+      "frameworks": {
+        "net9.0": {
+          "targetAlias": "net9.0",
+          "projectReferences": {}
+        }
+      },
+      "warningProperties": {
+        "warnAsError": [
+          "NU1605"
+        ]
+      },
+      "restoreAuditProperties": {
+        "enableAudit": "true",
+        "auditLevel": "low",
+        "auditMode": "direct"
+      },
+      "SdkAnalysisLevel": "9.0.300"
+    },
+    "frameworks": {
+      "net9.0": {
+        "targetAlias": "net9.0",
+        "dependencies": {
+          "AutoCAD.NET.Core": {
+            "target": "Package",
+            "version": "[25.0.0, )"
+          },
+          "AutoCAD.NET.Model": {
+            "target": "Package",
+            "version": "[25.0.0, )"
+          }
+        },
+        "imports": [
+          "net461",
+          "net462",
+          "net47",
+          "net471",
+          "net472",
+          "net48",
+          "net481"
+        ],
+        "assetTargetFallback": true,
+        "warn": true,
+        "frameworkReferences": {
+          "Microsoft.NETCore.App": {
+            "privateAssets": "all"
+          }
+        },
+        "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/9.0.306/PortableRuntimeIdentifierGraph.json"
+      }
+    }
+  }
+}

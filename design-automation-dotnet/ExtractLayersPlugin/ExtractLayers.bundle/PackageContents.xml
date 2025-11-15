@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ApplicationPackage>
+  <Components Description="Extract Layers Plugin">
+    <RuntimeRequirements OS="Win64" Platform="AutoCAD" SeriesMin="R25.0" SeriesMax="R25.0"/>
+    <ComponentEntry AppName="ExtractLayers" ModuleName="./Contents/ExtractLayers.dll" AppDescription="Extracts layer names" LoadOnCommandInvocation="True" CommandLocal="ExtractLayers" CommandGlobal="ExtractLayers"/>
+  </Components>
+</ApplicationPackage>

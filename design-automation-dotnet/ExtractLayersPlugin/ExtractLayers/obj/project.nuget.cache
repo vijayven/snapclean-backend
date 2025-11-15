@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "dgSpecHash": "PPekrYnRGso=",
+  "success": true,
+  "projectFilePath": "/Users/vijayv/Documents/SnapClean repo/snapclean-backend/design-automation-dotnet/ExtractLayersPlugin/ExtractLayers/ExtractLayers.csproj",
+  "expectedPackageFiles": [
+    "/Users/vijayv/.nuget/packages/autocad.net.core/25.0.0/autocad.net.core.25.0.0.nupkg.sha512",
+    "/Users/vijayv/.nuget/packages/autocad.net.model/25.0.0/autocad.net.model.25.0.0.nupkg.sha512"
+  ],
+  "logs": []
+}
