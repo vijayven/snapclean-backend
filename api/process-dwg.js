@@ -118,7 +118,13 @@ async function getSignedUploadUrl(accessToken, bucketKey, objectKey) {
       }
     }
   );
-  return response.data.uploadUrls[0]; // First part URL
+  //return response.data.uploadUrls[0]; // First part URL
+    
+  console.log('Upload URL response:', JSON.stringify(response.data, null, 2));
+  
+  // Try different possible structures
+  return response.data.uploadUrls?.[0] || response.data.urls?.[0] || response.data.signedUrl || response.data;
+
 }
 
 async function runWorkItem(accessToken, activityId, args) {
