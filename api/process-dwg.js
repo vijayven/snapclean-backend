@@ -123,7 +123,8 @@ async function getSignedUploadUrl(accessToken, bucketKey, objectKey) {
   console.log('Upload URL response:', JSON.stringify(response.data, null, 2));
   
   // Try different possible structures
-  return response.data.uploadUrls?.[0] || response.data.urls?.[0] || response.data.signedUrl || response.data;
+  //return response.data.uploadUrls?.[0] || response.data.urls?.[0] || response.data.signedUrl || response.data;
+  return response.data.urls[0]; // ← Return first URL from array
 
 }
 
@@ -356,7 +357,7 @@ module.exports = async (req, res) => {
       inputFile: { url: dwgUrl },
       outputLayers: {
         verb: 'put',
-        url: layersSignedData.uploadUrl
+        url: layersSignedData
       }
     };
 
