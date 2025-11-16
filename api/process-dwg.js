@@ -84,6 +84,10 @@ async function getSignedUrl(accessToken, bucketKey, objectKey) {
   };
 }
 */
+
+//-----
+//-- Potentially replace getSignedUrl with getSignedUploadUrl entirely i.e. delete getSignedUrl() function 
+//-----
 async function getSignedUrl(accessToken, bucketKey, objectKey) {
   const response = await axios.post(
     `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodeURIComponent(objectKey)}/signed`,
@@ -102,6 +106,19 @@ async function getSignedUrl(accessToken, bucketKey, objectKey) {
     uploadUrl: response.data.signedUrl,
     objectKey: objectKey
   };
+}
+
+async function getSignedUploadUrl(accessToken, bucketKey, objectKey) {
+  const response = await axios.get(
+    `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodeURIComponent(objectKey)}/signeds3upload?parts=1&minutesExpiration=10`,
+    {
+      headers: { 
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      }
+    }
+  );
+  return response.data.uploadUrls[0]; // First part URL
 }
 
 async function runWorkItem(accessToken, activityId, args) {
@@ -314,10 +331,17 @@ module.exports = async (req, res) => {
     //const layersOutputUrl = await getSignedUrl(accessToken, bucketKey, `layers-${Date.now()}.json`);
     const layersKey = `layers-${Date.now()}.json`;
     //const layersOutputUrl = await getSignedUrl(accessToken, bucketKey, layersKey);
-    const layersSignedData = await getSignedUrl(accessToken, bucketKey, layersKey);
+    
+    //-- replacing getSignedUrl (that got read URL) with getSignedUploadUrl (that uses write URL)
+    //const layersSignedData = await getSignedUrl(accessToken, bucketKey, layersKey);
+    //const dwgOutputUrl = await getSignedUrl(accessToken, bucketKey, `output-${Date.now()}.dwg`);
+    
+    const layersSignedData = await getSignedUploadUrl(accessToken, bucketKey, layersKey);
+    console.log('✅ Layers Signed URLs obtained');
 
-    const dwgOutputUrl = await getSignedUrl(accessToken, bucketKey, `output-${Date.now()}.dwg`);
-    console.log('✅ Signed URLs obtained');
+    const dwgOutputUrl = await getSignedUploadUrl(accessToken, bucketKey, `output-${Date.now()}.dwg`);
+    
+    console.log('✅ dwg Output Signed URLs obtained');
 
     // Step 4: Extract layers
     console.log('📥 Extracting layers via Design Automation...');
