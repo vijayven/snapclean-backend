@@ -360,7 +360,7 @@ module.exports = async (req, res) => {
       }
     };
 
-    //console.log('📋 ExtractLayers WorkItem args:', JSON.stringify(extractArgs, null, 2));
+    console.log('📋 ExtractLayers WorkItem args:', JSON.stringify(extractArgs, null, 2));
     //--- Need to access the result from workItem execution to get download URLs etc.
     //await runWorkItem(accessToken, 'ExtractLayersActivity', extractArgs);
     
