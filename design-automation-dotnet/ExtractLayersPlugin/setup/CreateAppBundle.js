@@ -28,7 +28,8 @@ async function getAccessToken() {
 
 async function createAppBundle() {
   const bundleName = 'ExtractLayersDLL';
-  const zipPath = path.join(__dirname, '../ExtractLayers/bin/Release/net9.0/ExtractLayers.zip');
+  //const zipPath = path.join(__dirname, '../ExtractLayers/bin/Release/net9.0/ExtractLayers.zip');
+  const zipPath = path.join(__dirname, '../ExtractLayers.zip');
   
   console.log(`\n🔨 Creating AppBundle: ${bundleName}`);
   

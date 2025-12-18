@@ -50,7 +50,7 @@ async function createActivity() {
       commandLine: [
         `$(engine.path)\\accoreconsole.exe /i "$(args[inputFile].path)" /al "$(appbundles[${bundleName}].path)" /s "$(settings[script].path)"`
       ],
-      engine: 'Autodesk.AutoCAD+25_0',
+      engine: 'Autodesk.AutoCAD+24_3',
       appbundles: [`${NICKNAME}.${bundleName}+prod`],
       parameters: {
         inputFile: {
@@ -68,7 +68,7 @@ async function createActivity() {
       },
       settings: {
         script: {
-          value: 'ExtractLayers\n'
+          value: '_ExtractLayers\n'
         }
       }
     },

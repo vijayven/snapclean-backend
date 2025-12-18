@@ -1,21 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ApplicationPackage 
   SchemaVersion="1.0" 
-  AutodeskProduct="AutoCAD"
-  ProductCode="ACAD"
+  AutodeskProduct="AutoCAD" 
+  ProductCode="{12345678-1234-1234-1234-123456789012}" 
+  UpgradeCode="{12345678-1234-1234-1234-123456789013}" 
   Name="ExtractLayers" 
-  Description="Extract layer names from DWG"
+  Description="Extract layer names from DWG" 
   AppVersion="1.0">
+  
   <CompanyDetails Name="SnapClean" />
-  <Components Description="Extract layer information">
+  
+  <Components>
     <RuntimeRequirements 
       OS="Win64" 
       Platform="AutoCAD" 
       SeriesMin="R25.0" 
       SeriesMax="R25.2" />
+      
     <ComponentEntry 
       AppName="ExtractLayers" 
-      ModuleName="./Contents/run.scr" 
-      AppDescription="Extracts all layer names to JSON" />
+      ModuleName="./Contents" 
+      LoadOnAutoCADStartup="True" 
+      AppDescription="Adds Contents folder to support path" />
   </Components>
 </ApplicationPackage>

@@ -367,7 +367,8 @@ module.exports = async (req, res) => {
     
     //--- Changing from script driven activity to DLL driven activity ExtractLayersActivity --> ExtractLayersDLLActivity
     //const workItemResult = await runWorkItem(accessToken, 'ExtractLayersActivity', extractArgs);
-    const workItemResult = await runWorkItem(accessToken, 'ExtractLayersDLLActivity', extractArgs);
+    //const workItemResult = await runWorkItem(accessToken, 'ExtractLayersDLLActivity', extractArgs); -- reverting
+    const workItemResult = await runWorkItem(accessToken, 'ExtractLayersActivity', extractArgs);
     
     console.log('📦 WorkItem result keys:', Object.keys(workItemResult));
     console.log('📦 WorkItem result:', JSON.stringify(workItemResult, null, 2));

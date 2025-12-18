@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ExtractLayers")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+5af990cc76fee64f88662c1e7c137b4065374279")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+2765b0843e52eb2e09a83bef09bc6edbcda1a8bc")]
 [assembly: System.Reflection.AssemblyProductAttribute("ExtractLayers")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ExtractLayers")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

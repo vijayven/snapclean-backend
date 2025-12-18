@@ -1,7 +1,33 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ApplicationPackage>
-  <Components Description="Extract Layers Plugin">
-    <RuntimeRequirements OS="Win64" Platform="AutoCAD" SeriesMin="R25.0" SeriesMax="R25.0"/>
-    <ComponentEntry AppName="ExtractLayers" ModuleName="./Contents/ExtractLayers.dll" AppDescription="Extracts layer names" LoadOnCommandInvocation="True" CommandLocal="ExtractLayers" CommandGlobal="ExtractLayers"/>
+<ApplicationPackage 
+  SchemaVersion="1.0" 
+  AutodeskProduct="AutoCAD" 
+  ProductType="Application" 
+  Name="ExtractLayersDLL" 
+  Description="Extract layer information from DWG files" 
+  AppVersion="1.0.0" 
+  Author="SnapClean" 
+  ProductCode="{F3C0C5A1-1234-4567-89AB-CDEF01234567}" 
+  UpgradeCode="{F3C0C5A1-1234-4567-89AB-CDEF01234568}">
+  <CompanyDetails 
+    Name="SnapClean" 
+    Url="https://snapclean.com" 
+    Email="support@snapclean.com" />
+  <Components Description="ExtractLayers Components">
+    <RuntimeRequirements 
+      OS="Win64" 
+      Platform="AutoCAD" 
+      SeriesMin="R24.0" 
+      SeriesMax="R25.0" />
+    <ComponentEntry 
+      AppName="ExtractLayers" 
+      ModuleName="./Contents/ExtractLayers.dll" 
+      AppDescription="Extracts layer names from DWG files" 
+      LoadOnCommandInvocation="False" 
+      LoadOnAutoCADStartup="True">
+      <Commands GroupName="ExtractLayersCommands">
+        <Command Global="ExtractLayers" Local="ExtractLayers" />
+      </Commands>
+    </ComponentEntry>
   </Components>
 </ApplicationPackage>
