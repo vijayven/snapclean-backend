@@ -5,6 +5,7 @@ require('dotenv').config({ path: path.join(__dirname, '../../.env') });
 const CLIENT_ID = process.env.APS_CLIENT_ID;
 const CLIENT_SECRET = process.env.APS_CLIENT_SECRET;
 const NICKNAME = process.env.APS_NICKNAME || 'snapclean';
+const api_url = 'https://developer.api.autodesk.com/da/us-east/v3';
 
 async function getAccessToken() {
   const response = await axios.post(
@@ -26,7 +27,7 @@ async function getAccessToken() {
 async function createActivity(activityName, bundleName, params) {
   const accessToken = await getAccessToken();
   const activityId = `${NICKNAME}.${activityName}+prod`;
-  const fullActivityName = `${NICKNAME}.${activityName}`;
+  //const fullActivityName = `${NICKNAME}.${activityName}`;
 
   console.log(`\n🔨 Creating Activity: ${activityName}`);
   console.log(`📦 Expected Activity ID: ${activityId}`);
@@ -47,8 +48,12 @@ async function createActivity(activityName, bundleName, params) {
     'https://developer.api.autodesk.com/da/us-east/v3/activities',
     {
       id: activityName,
+      //commandLine: [
+      //  `$(engine.path)\\accoreconsole.exe /i "$(args[inputFile].path)" /s "$(appbundles[${bundleName}].path)\\Contents\\run.scr"`
+      //],
+      // Modified CommandLine to autoload lsp file:
       commandLine: [
-        `$(engine.path)\\accoreconsole.exe /i "$(args[inputFile].path)" /s "$(appbundles[${bundleName}].path)\\Contents\\run.scr"`
+        `$(engine.path)\\accoreconsole.exe /i "$(args[inputFile].path)" /al "$(appbundles[${bundleName}].path)\\Contents\\extract-layers.lsp" /s "$(appbundles[${bundleName}].path)\\Contents\\run.scr"`
       ],
       engine: 'Autodesk.AutoCAD+25_0',
       appbundles: [`${NICKNAME}.${bundleName}+prod`],

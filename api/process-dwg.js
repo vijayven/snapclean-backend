@@ -370,11 +370,34 @@ module.exports = async (req, res) => {
     //const workItemResult = await runWorkItem(accessToken, 'ExtractLayersDLLActivity', extractArgs); -- reverting
     const workItemResult = await runWorkItem(accessToken, 'ExtractLayersActivity', extractArgs);
     
-    console.log('📦 WorkItem result keys:', Object.keys(workItemResult));
-    console.log('📦 WorkItem result:', JSON.stringify(workItemResult, null, 2));
+    //-- New code from Gemini (12/20/25) that moved table reading from newer vla-get-layers call to tblnext in run.scr (no .lsp)
+    //console.log('📦 WorkItem result keys:', Object.keys(workItemResult));
+    //console.log('📦 WorkItem result:', JSON.stringify(workItemResult, null, 2));
 
-    console.log('✅ Layers extracted');
+    console.log('✅ Layers extracted!');
 
+    //-- New code from Gemini (12/20/25) to download layers.json from what looks like a successful run.scr run short while ago
+    //-- Change: moved table reading from newer vla-get-layers call to older tblnext in run.scr (no .lsp)
+    //-- Step 5: Download layers etc. will not work with "return layers;" in place -- needs to be updated to proceed with that
+    if (workItemResult.status === 'success') {
+        // 1. Get a 'read' URL for the specific file DA just uploaded
+        const downloadSignedUrlResponse = await axios.post(
+          `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodeURIComponent(layersKey)}/signed`,
+          { access: "read" },
+          { headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' } }
+        );
+
+        // 2. Download the JSON content directly into the 'layers' variable
+        const response = await axios.get(downloadSignedUrlResponse.data.signedUrl);
+        const layers = response.data; 
+
+        // 3. Print to console so you can verify the content in your terminal
+        console.log('✅ EXTRACTED LAYERS:', JSON.stringify(layers));
+
+        // 4. Return the data for further processing
+        return layers;
+    }
+   
     // Step 5: Download layers
     
    // After WorkItem completes

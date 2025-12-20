@@ -1,2 +1,5 @@
-(load "extract-layers.lsp")
-(command "_.QUIT" "N")
+(defun extract-layers-to-json () (setq names '() lay (tblnext "LAYER" T)) (while lay (setq names (cons (cdr (assoc 2 lay)) names) lay (tblnext "LAYER" nil))) (setq file (open "layers.json" "w")) (if file (progn (princ "[" file) (setq first T) (foreach n names (if (not first) (princ "," file)) (princ (strcat "\"" n "\"") file) (setq first nil)) (princ "]" file) (close file))) (princ))
+(extract-layers-to-json)
+_.QUIT
+Y
+; End of script
