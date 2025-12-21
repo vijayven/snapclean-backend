@@ -377,9 +377,14 @@ module.exports = async (req, res) => {
     console.log('✅ Layers extracted!');
 
     //-- New code from Gemini (12/20/25) to download layers.json from what looks like a successful run.scr run short while ago
-    //-- Change: moved table reading from newer vla-get-layers call to older tblnext in run.scr (no .lsp)
+    //-- Change: Moved table reading from newer vla-get-layers call to older tblnext in run.scr (no .lsp)
     //-- Step 5: Download layers etc. will not work with "return layers;" in place -- needs to be updated to proceed with that
     if (workItemResult.status === 'success') {
+        console.log('✅ Job Succeeded. Waiting 3s for storage propagation...');
+        
+        // Add this delay to prevent the 404 ---CHECK 
+        await new Promise(resolve => setTimeout(resolve, 3000));
+
         // 1. Get a 'read' URL for the specific file DA just uploaded
         const downloadSignedUrlResponse = await axios.post(
           `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodeURIComponent(layersKey)}/signed`,
