@@ -131,6 +131,21 @@ async function getSignedUploadUrl(accessToken, bucketKey, objectKey) {
 }
 */
 async function getSignedUploadUrl(accessToken, bucketKey, objectKey) {
+  console.log('--- 🔍 INFRASTRUCTURE AUDIT ---');
+  console.log(`Bucket: [${bucketKey}] (Length: ${bucketKey.length})`);
+  console.log(`Object: [${layersKey}] (Length: ${layersKey.length})`);
+
+  // Manually verify existence one last time right before the failure
+  try {
+    const check = await axios.get(
+      `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/details`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+    console.log('✅ Bucket STILL exists at this millisecond');
+  } catch (e) {
+    console.log('❌ Bucket MISSING or ACCESSED DENIED at this millisecond:', e.response?.status);
+  }
+  console.log('--- 🚀 ATTEMPTING SIGNED URL ---');
   try {
     const response = await axios.post(
       `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodeURIComponent(objectKey)}/signed`,
@@ -375,6 +390,11 @@ module.exports = async (req, res) => {
     //const dwgOutputUrl = await getSignedUploadUrl(accessToken, bucketKey, `output-${Date.now()}.dwg`);
     //console.log('✅ dwg Output Signed URLs obtained');
     console.log(`🔑 Target Object Key: ${layersKey}`);
+    console.log('--- CRITICAL DEBUG ---');
+    console.log('BUCKET_KEY_LENGTH:', bucketKey.length);
+    console.log('BUCKET_KEY_VALUE: [' + bucketKey + ']');
+    console.log('OBJECT_KEY_VALUE: [' + layersKey + ']');
+    console.log('--- END DEBUG ---');
     const layersPutUrl = await getSignedUploadUrl(accessToken, bucketKey, layersKey);
 
 
