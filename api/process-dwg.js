@@ -395,7 +395,9 @@ module.exports = async (req, res) => {
     console.log('BUCKET_KEY_VALUE: [' + bucketKey + ']');
     console.log('OBJECT_KEY_VALUE: [' + layersKey + ']');
     console.log('--- END DEBUG ---');
-    const layersPutUrl = await getSignedUploadUrl(accessToken, bucketKey, layersKey);
+
+    //-- Replacing Signed URL (Single-Shot) with Direct OSS Put 
+    //const layersPutUrl = await getSignedUploadUrl(accessToken, bucketKey, layersKey);
 
 
     // Step 4: Extract layers
@@ -411,6 +413,7 @@ module.exports = async (req, res) => {
       }
     };
     */    
+    /* START: -- Replacing Signed URL (Single-Shot) with Direct OSS Put 
     const extractArgs = {
       inputFile: { url: dwgUrl },
       outputLayers: {
@@ -418,6 +421,17 @@ module.exports = async (req, res) => {
         url: layersPutUrl // DA 'should' PUT to this simple URL
       }
     };
+    */
+    const extractArgs = {
+      inputFile: { url: dwgUrl },
+      outputLayers: {
+        verb: 'put',
+        url: `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${layersKey}`,
+        headers: { Authorization: `Bearer ${accessToken}` }
+      }
+    };
+   //END: -- Replacing Signed URL (Single-Shot) with Direct OSS Put 
+    
 
    
 
@@ -440,44 +454,18 @@ module.exports = async (req, res) => {
     //-- Change: Moved table reading from newer vla-get-layers call to older tblnext in run.scr (no .lsp)
     //-- Step 5: Download layers etc. will not work with "return layers;" in place -- needs to be updated to proceed with that
     if (workItemResult.status === 'success') {
-        console.log('✅ Job Succeeded. Attempting download...');
-
-        try {
-            // A. Generate a READ URL for the same key
-            const readUrlResponse = await axios.post(
-                `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodeURIComponent(layersKey)}/signed`,
-                { access: 'read' },
-                { headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' } }
-            );
-
-            // B. Download directly
-            const response = await axios.get(readUrlResponse.data.signedUrl);
-            const layers = response.data;
-
-            console.log('********************************MD');
-            console.log('✅ SUCCESS - LAYERS EXTRACTED:');
-            console.log(JSON.stringify(layers, null, 2));
-            console.log('********************************MD');
-            
-            return layers;
-
-        } catch (downloadError) {
-            console.error('❌ Download failed despite Job Success.');
-            console.error('🔍 DEBUG: Listing bucket contents to verify file presence...');
-            
-            // C. SAFETY NET: List bucket items to see if the file is there but named differently
-            try {
-                const listResponse = await axios.get(
-                    `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects`,
-                    { headers: { Authorization: `Bearer ${accessToken}` } }
-                );
-                console.log('📂 Bucket Contents:', listResponse.data.items.map(i => i.objectKey));
-            } catch (listError) {
-                console.error('Could not list bucket:', listError.message);
-            }
-            
-            throw downloadError;
+      console.log('✅ Job Succeeded. Attempting download...');
+      //--- Replacing Signed URL (Single-Shot) with Direct OSS Put and doing direct read fbelow rom URL submitted in workItem 
+      const response = await axios.get(
+        `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${layersKey}`,
+        { 
+          headers: { Authorization: `Bearer ${accessToken}` },
+          responseType: 'json' 
         }
+      );
+      const layers = response.data;
+      console.log('📊 TEST RESULT:', JSON.stringify(layers));
+      return layers;
     } else {
         console.error('❌ WorkItem Failed:', workItemResult.reportUrl);
         throw new Error('Design Automation Job Failed');
