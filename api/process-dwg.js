@@ -108,6 +108,8 @@ async function getSignedUrl(accessToken, bucketKey, objectKey) {
   };
 }
 
+/* START:-- Replacing signeds3upload method with standard Signed URL with write permission. 
+      This provides a URL where a single PUT operation immediately creates a valid, visible file in the bucket—no "Completion" handshake required.
 async function getSignedUploadUrl(accessToken, bucketKey, objectKey) {
   const response = await axios.get(
     `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodeURIComponent(objectKey)}/signeds3upload?parts=1&minutesExpiration=10`,
@@ -127,6 +129,30 @@ async function getSignedUploadUrl(accessToken, bucketKey, objectKey) {
   return response.data.urls[0]; // ← Return first URL from array
 
 }
+*/
+async function getSignedUploadUrl(accessToken, bucketKey, objectKey) {
+  try {
+    const response = await axios.post(
+      `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodeURIComponent(objectKey)}/signed`,
+      { 
+        access: 'write', // Request WRITE permission
+        usePrefix: false // Ensure we are writing to the exact key
+      }, 
+      {
+        headers: { 
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    // The simple signed endpoint returns { signedUrl: "..." }
+    return response.data.signedUrl; 
+  } catch (error) {
+    console.error('❌ Failed to generate upload URL:', error.response ? error.response.data : error.message);
+    throw error;
+  }
+}
+//END: -- Replacing signeds3upload method with standard Signed URL with write permission. 
 
 async function runWorkItem(accessToken, activityId, args) {
   //--DEBUG
@@ -343,16 +369,20 @@ module.exports = async (req, res) => {
     //const layersSignedData = await getSignedUrl(accessToken, bucketKey, layersKey);
     //const dwgOutputUrl = await getSignedUrl(accessToken, bucketKey, `output-${Date.now()}.dwg`);
     
-    const layersSignedData = await getSignedUploadUrl(accessToken, bucketKey, layersKey);
-    console.log('✅ Layers Signed URLs obtained');
+    //-- Replacing signeds3upload with standard Signed URL with write permission
+    //const layersSignedData = await getSignedUploadUrl(accessToken, bucketKey, layersKey);
+    //console.log('✅ Layers Signed URLs obtained');
+    //const dwgOutputUrl = await getSignedUploadUrl(accessToken, bucketKey, `output-${Date.now()}.dwg`);
+    //console.log('✅ dwg Output Signed URLs obtained');
+    console.log(`🔑 Target Object Key: ${layersKey}`);
+    const layersPutUrl = await getSignedUploadUrl(accessToken, bucketKey, layersKey);
 
-    const dwgOutputUrl = await getSignedUploadUrl(accessToken, bucketKey, `output-${Date.now()}.dwg`);
-    
-    console.log('✅ dwg Output Signed URLs obtained');
 
     // Step 4: Extract layers
     console.log('📥 Extracting layers via Design Automation...');
  
+    //-- Replacing signeds3upload with standard Signed URL with write permission & simple PUT for layers.json file
+    /*
     const extractArgs = {
       inputFile: { url: dwgUrl },
       outputLayers: {
@@ -360,6 +390,16 @@ module.exports = async (req, res) => {
         url: layersSignedData
       }
     };
+    */    
+    const extractArgs = {
+      inputFile: { url: dwgUrl },
+      outputLayers: {
+        verb: 'put',
+        url: layersPutUrl // DA 'should' PUT to this simple URL
+      }
+    };
+
+   
 
     console.log('📋 ExtractLayers WorkItem args:', JSON.stringify(extractArgs, null, 2));
     //--- Need to access the result from workItem execution to get download URLs etc.
@@ -380,38 +420,49 @@ module.exports = async (req, res) => {
     //-- Change: Moved table reading from newer vla-get-layers call to older tblnext in run.scr (no .lsp)
     //-- Step 5: Download layers etc. will not work with "return layers;" in place -- needs to be updated to proceed with that
     if (workItemResult.status === 'success') {
-        console.log('✅ Job Succeeded. Fetching layers...');
+        console.log('✅ Job Succeeded. Attempting download...');
 
-        let downloadSignedUrlResponse = null;
-        let attempts = 0;
-        const maxAttempts = 5;
+        try {
+            // A. Generate a READ URL for the same key
+            const readUrlResponse = await axios.post(
+                `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodeURIComponent(layersKey)}/signed`,
+                { access: 'read' },
+                { headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' } }
+            );
 
-        while (attempts < maxAttempts) {
+            // B. Download directly
+            const response = await axios.get(readUrlResponse.data.signedUrl);
+            const layers = response.data;
+
+            console.log('********************************MD');
+            console.log('✅ SUCCESS - LAYERS EXTRACTED:');
+            console.log(JSON.stringify(layers, null, 2));
+            console.log('********************************MD');
+            
+            return layers;
+
+        } catch (downloadError) {
+            console.error('❌ Download failed despite Job Success.');
+            console.error('🔍 DEBUG: Listing bucket contents to verify file presence...');
+            
+            // C. SAFETY NET: List bucket items to see if the file is there but named differently
             try {
-                attempts++;
-                console.log(`Attempt ${attempts}: Generating read URL...`);
-                
-                downloadSignedUrlResponse = await axios.post(
-                    `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodeURIComponent(layersKey)}/signed`,
-                    { access: "read" },
-                    { headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' } }
+                const listResponse = await axios.get(
+                    `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects`,
+                    { headers: { Authorization: `Bearer ${accessToken}` } }
                 );
-                
-                if (downloadSignedUrlResponse.status === 200) break; // Success!
-            } catch (err) {
-                if (attempts === maxAttempts) throw err; // Give up after 5 tries
-                console.log('Object not found yet, retrying in 2s...');
-                await new Promise(resolve => setTimeout(resolve, 3000));
+                console.log('📂 Bucket Contents:', listResponse.data.items.map(i => i.objectKey));
+            } catch (listError) {
+                console.error('Could not list bucket:', listError.message);
             }
+            
+            throw downloadError;
         }
-
-        const response = await axios.get(downloadSignedUrlResponse.data.signedUrl);
-        const layers = response.data;
-
-        console.log('📊 TEST RESULT:', JSON.stringify(layers));
-        return layers;
+    } else {
+        console.error('❌ WorkItem Failed:', workItemResult.reportUrl);
+        throw new Error('Design Automation Job Failed');
     }
-    
+
     // Step 5: Download layers
     
    // After WorkItem completes
