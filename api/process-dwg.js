@@ -133,7 +133,7 @@ async function getSignedUploadUrl(accessToken, bucketKey, objectKey) {
 async function getSignedUploadUrl(accessToken, bucketKey, objectKey) {
   console.log('--- 🔍 INFRASTRUCTURE AUDIT ---');
   console.log(`Bucket: [${bucketKey}] (Length: ${bucketKey.length})`);
-  console.log(`Object: [${layersKey}] (Length: ${layersKey.length})`);
+  console.log(`Object: [${objectKey}]`);
 
   // Manually verify existence one last time right before the failure
   try {
