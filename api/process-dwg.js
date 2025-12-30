@@ -380,29 +380,38 @@ module.exports = async (req, res) => {
     //-- Change: Moved table reading from newer vla-get-layers call to older tblnext in run.scr (no .lsp)
     //-- Step 5: Download layers etc. will not work with "return layers;" in place -- needs to be updated to proceed with that
     if (workItemResult.status === 'success') {
-        console.log('✅ Job Succeeded. Waiting 3s for storage propagation...');
-        
-        // Add this delay to prevent the 404 ---CHECK 
-        await new Promise(resolve => setTimeout(resolve, 3000));
+        console.log('✅ Job Succeeded. Fetching layers...');
 
-        // 1. Get a 'read' URL for the specific file DA just uploaded
-        const downloadSignedUrlResponse = await axios.post(
-          `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodeURIComponent(layersKey)}/signed`,
-          { access: "read" },
-          { headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' } }
-        );
+        let downloadSignedUrlResponse = null;
+        let attempts = 0;
+        const maxAttempts = 5;
 
-        // 2. Download the JSON content directly into the 'layers' variable
+        while (attempts < maxAttempts) {
+            try {
+                attempts++;
+                console.log(`Attempt ${attempts}: Generating read URL...`);
+                
+                downloadSignedUrlResponse = await axios.post(
+                    `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodeURIComponent(layersKey)}/signed`,
+                    { access: "read" },
+                    { headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' } }
+                );
+                
+                if (downloadSignedUrlResponse.status === 200) break; // Success!
+            } catch (err) {
+                if (attempts === maxAttempts) throw err; // Give up after 5 tries
+                console.log('Object not found yet, retrying in 2s...');
+                await new Promise(resolve => setTimeout(resolve, 3000));
+            }
+        }
+
         const response = await axios.get(downloadSignedUrlResponse.data.signedUrl);
-        const layers = response.data; 
+        const layers = response.data;
 
-        // 3. Print to console so you can verify the content in your terminal
-        console.log('✅ EXTRACTED LAYERS:', JSON.stringify(layers));
-
-        // 4. Return the data for further processing
+        console.log('📊 TEST RESULT:', JSON.stringify(layers));
         return layers;
     }
-   
+    
     // Step 5: Download layers
     
    // After WorkItem completes
