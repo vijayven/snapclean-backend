@@ -219,12 +219,15 @@ async function getSignedUploadUrl(accessToken, bucketKey, objectKey) {
 //
 //--- Step 1 = startS3Upload() to "open" the file here:
 async function startS3Upload(accessToken, bucketKey, objectKey) {
-    const res = await axios.post(
-        `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodeURIComponent(objectKey)}/signeds3upload`,
-        {}, 
-        { headers: { Authorization: `Bearer ${accessToken}` } }
-    );
-    return res.data; // Returns { uploadKey, urls: [...] }
+  // Use GET to initiate the upload session
+  const res = await axios.get(
+    `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodeURIComponent(objectKey)}/signeds3upload`,
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  );
+  
+  // This returns { uploadKey, urls: [...], ... }
+  console.log('startS3Upload response:', JSON.stringify(res.data, null, 2));
+  return res.data; 
 }
 
 //--- Step 2 = completeS3Upload to "complete" file upload after runWorkItem here:
