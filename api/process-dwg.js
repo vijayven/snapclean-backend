@@ -172,6 +172,9 @@ async function getSignedUploadUrl(accessToken, bucketKey, objectKey) {
 //END: -- Replacing signeds3upload method with standard Signed URL with write permission. 
 */
 //---- Replacing standard Signed URL that's now legacy with signeds3upload version with explicit "Complete upload" step
+//-- START: Now replacing signeds3upload version with explicit "Complete upload" step
+//-- PART 1 of replacing signeds3upload version with explicit "Complete upload" step: Deleting existing function
+/*
 async function getSignedUploadUrl(accessToken, bucketKey, objectKey) {
     // 1. Get the S3 upload URL (Modern way)
     const res = await axios.post(
@@ -194,7 +197,21 @@ async function getSignedUploadUrl(accessToken, bucketKey, objectKey) {
 
     return uploadUrl;
 }
+*/
 //END: ---- Replacing standard Signed URL that's now legacy with signeds3upload version with explicit "Complete upload" step
+
+//-- PART 2 of replacing signeds3upload version with explicit "Complete upload" step: New getSignedUploadUrl( function
+//-- New getSignedUploadUrl() function goes back to "Simple PUT" approach but uses GET + parts=1 to get a "Single-Shot" S3 URL that DA then uses to PUT layers.json
+async function getSignedUploadUrl(accessToken, bucketKey, objectKey) {
+  // We use GET and ?parts=1 to get a "one-shot" URL that needs no 'Complete' call.
+  const res = await axios.get(
+    `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodeURIComponent(objectKey)}/signeds3upload?parts=1`,
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  );
+
+  // This URL is direct to S3 and tells S3 the file is finished once the PUT is done.
+  return res.data.urls[0];
+}
 
 async function runWorkItem(accessToken, activityId, args) {
   //--DEBUG
