@@ -579,6 +579,11 @@ module.exports = async (req, res) => {
         console.log('🏁 Job success. Finalizing S3 upload...');
         await completeS3Upload(accessToken, bucketKey, layersKey, s3Data.uploadKey);
         --- END PART 2: Switching from explit startS3upload and completeS3upload URL based approach to one that uses new URN approach ---*/
+      
+      console.log('🏁 Job success. Waiting for OSS to index the file...');
+    
+      // Wait 2 seconds for the URN to become "Live" in the bucket
+      await new Promise(resolve => setTimeout(resolve, 2000));
 
       // Download using the same S3-Direct method
       const downloadData = await axios.get(
