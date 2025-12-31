@@ -528,22 +528,38 @@ module.exports = async (req, res) => {
       }
     };
    */
+    
+    /*--- START PART 1: Switching from explit startS3upload and completeS3upload URL based approach to one that uses new URN approach
+    //-- URN approach is meant to eliminate need for handing off uploadKey, eTags, file sizes etc across Start and Complete upload
     //-- Step 1: start upload / open file for layers.json output & prepare to run WorkItem
     const s3Data = await startS3Upload(accessToken, bucketKey, layersKey);
     const extractArgs = {
         inputFile: { url: dwgUrl },
         outputLayers: { verb: 'put', url: s3Data.urls[0] }
     };
+     --- END Part 1: Switching from explit startS3upload and completeS3upload URL based approach to one that uses new URN approach --*/   
 
-   
+    // No need to call startS3Upload or getSignedUploadUrl anymore!
+    // Create an Object URN (Standard format for APS)
+    const objectUrn = `urn:adsk.objects:os.object:${bucketKey}/${encodeURIComponent(objectKey)}`;
 
+    const extractArgs = {
+        inputFile: { url: dwgUrl },
+        outputLayers: { 
+            verb: 'put', 
+            url: objectUrn, // Pass the URN directly
+            headers: {
+                Authorization: `Bearer ${accessToken}` // DA uses this to finalize for you
+            }
+        }
+    };
     console.log('📋 ExtractLayers WorkItem args:', JSON.stringify(extractArgs, null, 2));
     //--- Need to access the result from workItem execution to get download URLs etc.
     //await runWorkItem(accessToken, 'ExtractLayersActivity', extractArgs);
     
     //--- Changing from script driven activity to DLL driven activity ExtractLayersActivity --> ExtractLayersDLLActivity
     //const workItemResult = await runWorkItem(accessToken, 'ExtractLayersActivity', extractArgs);
-    //const workItemResult = await runWorkItem(accessToken, 'ExtractLayersDLLActivity', extractArgs); -- reverting
+    //const workItemResult = await runWorkItem(accessToken, 'ExtractLayersDLLActivity', extractArgs); -- reverting to non-DLL Activity
     const workItemResult = await runWorkItem(accessToken, 'ExtractLayersActivity', extractArgs);
     
     //-- New code from Gemini (12/20/25) that moved table reading from newer vla-get-layers call to tblnext in run.scr (no .lsp)
@@ -559,21 +575,23 @@ module.exports = async (req, res) => {
     //--- New 2-step multi-part upload logic from Gemini for layers.json to replace getSignedUploadUrl and related code / logic
     //-- if WorkItem is successfull then call completeS3Upload() to finish upload (and hope function doesn't time out)
     if (workItemResult.status === 'success') {
+      /*--- START PART 2: Switching from explit startS3upload and completeS3upload URL based approach to one that uses new URN approach  
         console.log('🏁 Job success. Finalizing S3 upload...');
         await completeS3Upload(accessToken, bucketKey, layersKey, s3Data.uploadKey);
+        --- END PART 2: Switching from explit startS3upload and completeS3upload URL based approach to one that uses new URN approach ---*/
 
-        // Download using the same S3-Direct method
-        const downloadData = await axios.get(
-            `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodeURIComponent(layersKey)}/signeds3download`,
-            { headers: { Authorization: `Bearer ${accessToken}` } }
-        );
+      // Download using the same S3-Direct method
+      const downloadData = await axios.get(
+          `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodeURIComponent(layersKey)}/signeds3download`,
+          { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
         
-        const finalFile = await axios.get(downloadData.data.url);
-        return finalFile.data;
+      const finalFile = await axios.get(downloadData.data.url);
+      return finalFile.data;
     } 
     else {
-        console.error('❌ WorkItem Failed:', workItemResult.reportUrl);
-        throw new Error('Design Automation Job Failed');
+      console.error('❌ WorkItem Failed:', workItemResult.reportUrl);
+      throw new Error('Design Automation Job Failed');
     }
 
     // Step 5: Download layers
