@@ -236,13 +236,15 @@ async function completeS3Upload(accessToken, bucketKey, objectKey, uploadKey) {
         `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodeURIComponent(objectKey)}/signeds3upload`,
         { 
             uploadKey: uploadKey,
-            parts: [1] // Explicitly tells APS only 1 part was uploaded
+            size: 42 // This is a dummy size for a small JSON. 
+                     // S3 will overwrite this with the actual bytes DA uploaded.
         },
         { 
             headers: { 
                 Authorization: `Bearer ${accessToken}`,
                 'Content-Type': 'application/json'
-            }
+            },
+            timeout: 15000 
         }
     );
 }
