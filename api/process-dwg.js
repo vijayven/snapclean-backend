@@ -236,7 +236,7 @@ async function completeS3Upload(accessToken, bucketKey, objectKey, uploadKey) {
         `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodeURIComponent(objectKey)}/signeds3upload`,
         { 
             uploadKey: uploadKey,
-            size: 42 // This is a dummy size for a small JSON. 
+            size: 89 // This is a dummy size for a small JSON. 
                      // S3 will overwrite this with the actual bytes DA uploaded.
         },
         { 
