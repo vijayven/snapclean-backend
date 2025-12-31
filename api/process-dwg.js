@@ -130,6 +130,8 @@ async function getSignedUploadUrl(accessToken, bucketKey, objectKey) {
 
 }
 */
+
+/* START: Replacing standard Signed URL that's now legacy with signeds3upload version with explicit "Complete upload" step
 async function getSignedUploadUrl(accessToken, bucketKey, objectKey) {
   console.log('--- 🔍 INFRASTRUCTURE AUDIT ---');
   console.log(`Bucket: [${bucketKey}] (Length: ${bucketKey.length})`);
@@ -168,6 +170,31 @@ async function getSignedUploadUrl(accessToken, bucketKey, objectKey) {
   }
 }
 //END: -- Replacing signeds3upload method with standard Signed URL with write permission. 
+*/
+//---- Replacing standard Signed URL that's now legacy with signeds3upload version with explicit "Complete upload" step
+async function getSignedUploadUrl(accessToken, bucketKey, objectKey) {
+    // 1. Get the S3 upload URL (Modern way)
+    const res = await axios.post(
+        `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodeURIComponent(objectKey)}/signeds3upload`,
+        {}, 
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+
+    console.log('Upload URL response:', JSON.stringify(res.data, null, 2));
+    const uploadKey = res.data.uploadKey;
+    const uploadUrl = res.data.urls[0];
+
+    // 2. CRITICAL: "Complete" the upload setup immediately; Effectively Zero-Byte Commit that tells OSS the file record is ready
+    // This removes the "Legacy" block and makes the URL usable for a single PUT.
+    await axios.post(
+        `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodeURIComponent(objectKey)}/signeds3upload`,
+        { uploadKey: uploadKey },
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+
+    return uploadUrl;
+}
+//END: ---- Replacing standard Signed URL that's now legacy with signeds3upload version with explicit "Complete upload" step
 
 async function runWorkItem(accessToken, activityId, args) {
   //--DEBUG
@@ -398,7 +425,8 @@ module.exports = async (req, res) => {
 
     //-- Replacing Signed URL (Single-Shot) with Direct OSS Put 
     //const layersPutUrl = await getSignedUploadUrl(accessToken, bucketKey, layersKey);
-
+    //-- Reviving Signed URL call this time with explicit complete
+    const layersPutUrl = await getSignedUploadUrl(accessToken, bucketKey, layersKey);
 
     // Step 4: Extract layers
     console.log('📥 Extracting layers via Design Automation...');
@@ -422,15 +450,25 @@ module.exports = async (req, res) => {
       }
     };
     */
-    const extractArgs = {
+    
+    //-- Going back to Signed URL method, with "explicit upload complete" step since Direct OSS method has been deprecated.
+    //const extractArgs = {
+    //  inputFile: { url: dwgUrl },
+    //  outputLayers: {
+    //    verb: 'put',
+    //    url: `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${layersKey}`,
+    //    headers: { Authorization: `Bearer ${accessToken}` }
+    //  }
+    //};
+   //END: -- Replacing Signed URL (Single-Shot) with Direct OSS Put 
+   const extractArgs = {
       inputFile: { url: dwgUrl },
       outputLayers: {
         verb: 'put',
-        url: `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${layersKey}`,
-        headers: { Authorization: `Bearer ${accessToken}` }
+        url: layersPutUrl 
+        // IMPORTANT: No headers object here anymore!
       }
     };
-   //END: -- Replacing Signed URL (Single-Shot) with Direct OSS Put 
     
 
    
@@ -455,7 +493,7 @@ module.exports = async (req, res) => {
     //-- Step 5: Download layers etc. will not work with "return layers;" in place -- needs to be updated to proceed with that
     if (workItemResult.status === 'success') {
       console.log('✅ Job Succeeded. Attempting download...');
-      //--- Replacing Signed URL (Single-Shot) with Direct OSS Put and doing direct read fbelow rom URL submitted in workItem 
+      //--- Replacing Signed URL (Single-Shot) with Direct OSS Put and doing direct read below from URL submitted in workItem 
       const response = await axios.get(
         `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${layersKey}`,
         { 
