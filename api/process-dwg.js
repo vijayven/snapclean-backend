@@ -234,8 +234,16 @@ async function startS3Upload(accessToken, bucketKey, objectKey) {
 async function completeS3Upload(accessToken, bucketKey, objectKey, uploadKey) {
     await axios.post(
         `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodeURIComponent(objectKey)}/signeds3upload`,
-        { uploadKey: uploadKey },
-        { headers: { Authorization: `Bearer ${accessToken}` } }
+        { 
+            uploadKey: uploadKey,
+            parts: [1] // Explicitly tells APS only 1 part was uploaded
+        },
+        { 
+            headers: { 
+                Authorization: `Bearer ${accessToken}`,
+                'Content-Type': 'application/json'
+            }
+        }
     );
 }
 
