@@ -64,191 +64,6 @@ async function uploadToOSS(accessToken, bucketKey, objectKey, fileData) {
   return `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${objectKey}`;
 }
 
-/*
-async function getSignedUrl(accessToken, bucketKey, objectKey) {
-  
-  const response = await axios.get(
-    `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${objectKey}/signeds3upload?parts=1&minutesExpiration=10`,
-    {
-      headers: { Authorization: `Bearer ${accessToken}` }
-    }
-  );
-  
-  
-  //return response.data.urls[0];
-  //--- Return objectKey and uploadKey in addition to URL for downloads later   
-  return {
-    uploadUrl: response.data.urls[0],
-    uploadKey: response.data.uploadKey,
-    objectKey: objectKey  // The original key you passed in
-  };
-}
-*/
-
-//-----
-//-- Potentially replace getSignedUrl with getSignedUploadUrl entirely i.e. delete getSignedUrl() function 
-//-----
-async function getSignedUrl(accessToken, bucketKey, objectKey) {
-  const response = await axios.post(
-    `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodeURIComponent(objectKey)}/signed`,
-    {
-      minutesExpiration: 10
-    },
-    {
-      headers: { 
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json'
-      }
-    }
-  );
-  
-  return {
-    uploadUrl: response.data.signedUrl,
-    objectKey: objectKey
-  };
-}
-
-/* START:-- Replacing signeds3upload method with standard Signed URL with write permission. 
-      This provides a URL where a single PUT operation immediately creates a valid, visible file in the bucket—no "Completion" handshake required.
-async function getSignedUploadUrl(accessToken, bucketKey, objectKey) {
-  const response = await axios.get(
-    `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodeURIComponent(objectKey)}/signeds3upload?parts=1&minutesExpiration=10`,
-    {
-      headers: { 
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json'
-      }
-    }
-  );
-  //return response.data.uploadUrls[0]; // First part URL
-    
-  console.log('Upload URL response:', JSON.stringify(response.data, null, 2));
-  
-  // Try different possible structures
-  //return response.data.uploadUrls?.[0] || response.data.urls?.[0] || response.data.signedUrl || response.data;
-  return response.data.urls[0]; // ← Return first URL from array
-
-}
-*/
-
-/* START: Replacing standard Signed URL that's now legacy with signeds3upload version with explicit "Complete upload" step
-async function getSignedUploadUrl(accessToken, bucketKey, objectKey) {
-  console.log('--- 🔍 INFRASTRUCTURE AUDIT ---');
-  console.log(`Bucket: [${bucketKey}] (Length: ${bucketKey.length})`);
-  console.log(`Object: [${objectKey}]`);
-
-  // Manually verify existence one last time right before the failure
-  try {
-    const check = await axios.get(
-      `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/details`,
-      { headers: { Authorization: `Bearer ${accessToken}` } }
-    );
-    console.log('✅ Bucket STILL exists at this millisecond');
-  } catch (e) {
-    console.log('❌ Bucket MISSING or ACCESSED DENIED at this millisecond:', e.response?.status);
-  }
-  console.log('--- 🚀 ATTEMPTING SIGNED URL ---');
-  try {
-    const response = await axios.post(
-      `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodeURIComponent(objectKey)}/signed`,
-      { 
-        access: 'write', // Request WRITE permission
-        usePrefix: false // Ensure we are writing to the exact key
-      }, 
-      {
-        headers: { 
-          Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
-    // The simple signed endpoint returns { signedUrl: "..." }
-    return response.data.signedUrl; 
-  } catch (error) {
-    console.error('❌ Failed to generate upload URL:', error.response ? error.response.data : error.message);
-    throw error;
-  }
-}
-//END: -- Replacing signeds3upload method with standard Signed URL with write permission. 
-*/
-//---- Replacing standard Signed URL that's now legacy with signeds3upload version with explicit "Complete upload" step
-//-- START: Now replacing signeds3upload version with explicit "Complete upload" step
-//-- PART 1 of replacing signeds3upload version with explicit "Complete upload" step: Deleting existing function
-/*
-async function getSignedUploadUrl(accessToken, bucketKey, objectKey) {
-    // 1. Get the S3 upload URL (Modern way)
-    const res = await axios.post(
-        `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodeURIComponent(objectKey)}/signeds3upload`,
-        {}, 
-        { headers: { Authorization: `Bearer ${accessToken}` } }
-    );
-
-    console.log('Upload URL response:', JSON.stringify(res.data, null, 2));
-    const uploadKey = res.data.uploadKey;
-    const uploadUrl = res.data.urls[0];
-
-    // 2. CRITICAL: "Complete" the upload setup immediately; Effectively Zero-Byte Commit that tells OSS the file record is ready
-    // This removes the "Legacy" block and makes the URL usable for a single PUT.
-    await axios.post(
-        `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodeURIComponent(objectKey)}/signeds3upload`,
-        { uploadKey: uploadKey },
-        { headers: { Authorization: `Bearer ${accessToken}` } }
-    );
-
-    return uploadUrl;
-}
-*/
-//END: ---- Replacing standard Signed URL that's now legacy with signeds3upload version with explicit "Complete upload" step
-
-//-- PART 2 of replacing signeds3upload version with explicit "Complete upload" step: New getSignedUploadUrl( function
-//-- New getSignedUploadUrl() function goes back to 'Simple PUT' approach but uses GET + parts=1 to get a 'Single-Shot' S3 URL that DA then uses to PUT layers.json
-async function getSignedUploadUrl(accessToken, bucketKey, objectKey) {
-  // We use GET and ?parts=1 to get a "one-shot" URL that needs no 'Complete' call.
-  const res = await axios.get(
-    `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodeURIComponent(objectKey)}/signeds3upload?parts=1`,
-    { headers: { Authorization: `Bearer ${accessToken}` } }
-  );
-
-  // This URL is direct to S3 and tells S3 the file is finished once the PUT is done.
-  return res.data.urls[0];
-}
-
-//--- New 2-step multi-part upload logic from Gemini for layers.json to replace getSignedUploadUrl and related code / logic
-//--- Step 1 "opens" the file and allows runWorkItem to be run with an uploadKey/url and 
-//--- Step 2 "completes" the download AFTER runWorkItem has finished instead of pre-emtively trying to "complete" upload like before
-//
-//--- Step 1 = startS3Upload() to "open" the file here:
-async function startS3Upload(accessToken, bucketKey, objectKey) {
-  // Use GET to initiate the upload session
-  const res = await axios.get(
-    `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodeURIComponent(objectKey)}/signeds3upload`,
-    { headers: { Authorization: `Bearer ${accessToken}` } }
-  );
-  
-  // This returns { uploadKey, urls: [...], ... }
-  console.log('startS3Upload response:', JSON.stringify(res.data, null, 2));
-  return res.data; 
-}
-
-//--- Step 2 = completeS3Upload to "complete" file upload after runWorkItem here:
-async function completeS3Upload(accessToken, bucketKey, objectKey, uploadKey) {
-    await axios.post(
-        `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodeURIComponent(objectKey)}/signeds3upload`,
-        { 
-            uploadKey: uploadKey,
-            size: 89, // This is hardcoded size got from error logs of previous run since S3 did NOT overwrite this with the actual bytes DA uploaded 
-            contentType: 'application/json' // Adding explicit contentType = json to match DA output type to see if hanging call is fixed
-        },
-        { 
-            headers: { 
-                Authorization: `Bearer ${accessToken}`,
-                'Content-Type': 'application/json'
-            },
-            timeout: 15000 
-        }
-    );
-}
-
 async function runWorkItem(accessToken, activityId, args) {
   //--DEBUG
   console.log('\n🔍 WorkItem Debug Info:');
@@ -438,109 +253,10 @@ module.exports = async (req, res) => {
     const dwgUrl = dwgDownloadUrlResp.data.url;
     console.log('📤 DWG URL for DA:', dwgUrl);
 
-    /* Skipping test, proceeding with Design Automation...
-    // TEST: Verify file is accessible
-    try {
-      const testDownload = await axios.get(dwgUrl, {
-        maxContentLength: 1000,
-        responseType: 'arraybuffer'
-      });
-      console.log('✅ File is accessible, downloaded:', testDownload.data.byteLength, 'bytes');
-    } catch (e) {
-      console.error('❌ File NOT accessible:', e.response?.status);
-      throw new Error('Uploaded file is not accessible');
-    }
-    */
-    console.log('⏭️  Skipping test download for now, proceeding with Design Automation...');
-
-    // Step 3: Get signed URLs for outputs
-    console.log('🔗 Getting signed URLs...');
-    //-- Saving the layersKey for retrieving later
-    //const layersOutputUrl = await getSignedUrl(accessToken, bucketKey, `layers-${Date.now()}.json`);
-    const layersKey = `layers-${Date.now()}.json`;
-    //const layersOutputUrl = await getSignedUrl(accessToken, bucketKey, layersKey);
-    
-    //-- replacing getSignedUrl (that got read URL) with getSignedUploadUrl (that uses write URL)
-    //const layersSignedData = await getSignedUrl(accessToken, bucketKey, layersKey);
-    //const dwgOutputUrl = await getSignedUrl(accessToken, bucketKey, `output-${Date.now()}.dwg`);
-    
-    //-- Replacing signeds3upload with standard Signed URL with write permission
-    //const layersSignedData = await getSignedUploadUrl(accessToken, bucketKey, layersKey);
-    //console.log('✅ Layers Signed URLs obtained');
-    //const dwgOutputUrl = await getSignedUploadUrl(accessToken, bucketKey, `output-${Date.now()}.dwg`);
-    //console.log('✅ dwg Output Signed URLs obtained');
-    console.log(`🔑 Target Object Key: ${layersKey}`);
-    console.log('--- CRITICAL DEBUG ---');
-    console.log('BUCKET_KEY_LENGTH:', bucketKey.length);
-    console.log('BUCKET_KEY_VALUE: [' + bucketKey + ']');
-    console.log('OBJECT_KEY_VALUE: [' + layersKey + ']');
-    console.log('--- END DEBUG ---');
-
-    //-- Replacing Signed URL (Single-Shot) with Direct OSS Put 
-    //const layersPutUrl = await getSignedUploadUrl(accessToken, bucketKey, layersKey);
-    //-- Reviving Signed URL call this time with explicit complete
-    //--- New 2-step multi-part upload logic from Gemini for layers.json to replace getSignedUploadUrl and related code / logic
-    //--- Commenting out getSignedUploadUrl() call for now as part of New 2-step multi-part upload logic
-    //const layersPutUrl = await getSignedUploadUrl(accessToken, bucketKey, layersKey);
-
-    // Step 4: Extract layers
-    console.log('📥 Extracting layers via Design Automation...');
- 
-    //-- Replacing signeds3upload with standard Signed URL with write permission & simple PUT for layers.json file
-    /*
-    const extractArgs = {
-      inputFile: { url: dwgUrl },
-      outputLayers: {
-        verb: 'put',
-        url: layersSignedData
-      }
-    };
-    */    
-    /* START: -- Replacing Signed URL (Single-Shot) with Direct OSS Put 
-    const extractArgs = {
-      inputFile: { url: dwgUrl },
-      outputLayers: {
-        verb: 'put',
-        url: layersPutUrl // DA 'should' PUT to this simple URL
-      }
-    };
-    */
-    
-    //-- Going back to Signed URL method, with "explicit upload complete" step since Direct OSS method has been deprecated.
-    //const extractArgs = {
-    //  inputFile: { url: dwgUrl },
-    //  outputLayers: {
-    //    verb: 'put',
-    //    url: `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${layersKey}`,
-    //    headers: { Authorization: `Bearer ${accessToken}` }
-    //  }
-    //};
-   //END: -- Replacing Signed URL (Single-Shot) with Direct OSS Put 
-
-   //--- New 2-step multi-part upload logic from Gemini for layers.json to replace getSignedUploadUrl and related code / logic
-   /*
-   const extractArgs = {
-      inputFile: { url: dwgUrl },
-      outputLayers: {
-        verb: 'put',
-        url: layersPutUrl 
-        // IMPORTANT: No headers object here anymore!
-      }
-    };
-   */
-    
-    /*--- START PART 1: Switching from explit startS3upload and completeS3upload URL based approach to one that uses new URN approach
-    //-- URN approach is meant to eliminate need for handing off uploadKey, eTags, file sizes etc across Start and Complete upload
-    //-- Step 1: start upload / open file for layers.json output & prepare to run WorkItem
-    const s3Data = await startS3Upload(accessToken, bucketKey, layersKey);
-    const extractArgs = {
-        inputFile: { url: dwgUrl },
-        outputLayers: { verb: 'put', url: s3Data.urls[0] }
-    };
-     --- END Part 1: Switching from explit startS3upload and completeS3upload URL based approach to one that uses new URN approach --*/   
-
-    // No need to call startS3Upload or getSignedUploadUrl anymore!
-    // Create an Object URN (Standard format for APS)
+    // Step 3: Create Object URN for outputs after generating unique layersKey for retrieving later
+    //         Switched from URL to URN method which seems more modern and better supported; avoids uploadKey hand-offs etc.
+    const layersKey = `layers-${Date.now()}.json`;   
+    console.log('📥 Extracting layers via Design Automation to: ', layersKey, " ...");
     const objectUrn = `urn:adsk.objects:os.object:${bucketKey}/${encodeURIComponent(layersKey)}`;
 
     const extractArgs = {
@@ -549,53 +265,35 @@ module.exports = async (req, res) => {
             verb: 'put', 
             url: objectUrn, // Pass the URN directly
             headers: {
-                Authorization: `Bearer ${accessToken}` // DA uses this to finalize for you
+                Authorization: `Bearer ${accessToken}` // DA uses this to finalize file/complete upload for you
             }
         }
     };
-    console.log('📋 ExtractLayers WorkItem args:', JSON.stringify(extractArgs, null, 2));
-    //--- Need to access the result from workItem execution to get download URLs etc.
-    //await runWorkItem(accessToken, 'ExtractLayersActivity', extractArgs);
     
-    //--- Changing from script driven activity to DLL driven activity ExtractLayersActivity --> ExtractLayersDLLActivity
-    //const workItemResult = await runWorkItem(accessToken, 'ExtractLayersActivity', extractArgs);
-    //const workItemResult = await runWorkItem(accessToken, 'ExtractLayersDLLActivity', extractArgs); -- reverting to non-DLL Activity
+    console.log('📋 ExtractLayers WorkItem args:', JSON.stringify(extractArgs, null, 2));
     const workItemResult = await runWorkItem(accessToken, 'ExtractLayersActivity', extractArgs);
     
-    //-- New code from Gemini (12/20/25) that moved table reading from newer vla-get-layers call to tblnext in run.scr (no .lsp)
-    //console.log('📦 WorkItem result keys:', Object.keys(workItemResult));
-    //console.log('📦 WorkItem result:', JSON.stringify(workItemResult, null, 2));
-
     console.log('✅ Layers extracted!');
 
-    //-- New code from Gemini (12/20/25) to download layers.json from what looks like a successful run.scr run short while ago
-    //-- Change: Moved table reading from newer vla-get-layers call to older tblnext in run.scr (no .lsp)
-    //-- Step 5: Download layers etc. will not work with "return layers;" in place -- needs to be updated to proceed with that
-    
-    //--- New 2-step multi-part upload logic from Gemini for layers.json to replace getSignedUploadUrl and related code / logic
-    //-- if WorkItem is successfull then call completeS3Upload() to finish upload (and hope function doesn't time out)
     if (workItemResult.status === 'success') {
-      /*--- START PART 2: Switching from explit startS3upload and completeS3upload URL based approach to one that uses new URN approach  
-        console.log('🏁 Job success. Finalizing S3 upload...');
-        await completeS3Upload(accessToken, bucketKey, layersKey, s3Data.uploadKey);
-        --- END PART 2: Switching from explit startS3upload and completeS3upload URL based approach to one that uses new URN approach ---*/
-      
       console.log('🏁 Job success. Waiting for OSS to index the file...');
     
       // Wait 2 seconds for the URN to become "Live" in the bucket
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      //await new Promise(resolve => setTimeout(resolve, 2000)); -- not sure we need this anymore since DL call hanging was from something else
 
-      // Download using the same S3-Direct method
+      // Download using the same S3-Direct method as part of new URN method
       const downloadData = await axios.get(
           `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodeURIComponent(layersKey)}/signeds3download`,
           { headers: { Authorization: `Bearer ${accessToken}` } }
       );
         
       console.log('Download URL response:', JSON.stringify(downloadData.data, null, 2));
-      // Axios seems to be messing up download file so trying "arraybuffer" method 
-      //const finalFile = await axios.get(downloadData.data.url);
       console.log('✅ Download URL received. Fetching raw content...');
 
+      // Axios messing up download file since it tries to be "smart" when it sees .json extension and tries to parse the stream immediately
+      // But S3 URL here contains very heavy response-content-disposition string which causes Axios to hangs because it’s waiting for the end of a stream that is being "throttled" or misread due to these header parameters.
+      // Using "arraybuffer" method with Axios to prevent this "smart auto-parsing" thats causing DL call to hang
+      //const finalFile = await axios.get(downloadData.data.url);
       const finalFile = await axios.get(downloadData.data.url, {
           responseType: 'arraybuffer', // Tells Axios: "Just give me the bytes"
           decompress: false            // Prevents Axios from trying to unzip the stream
