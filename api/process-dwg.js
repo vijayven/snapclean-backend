@@ -330,17 +330,24 @@ module.exports = async (req, res) => {
     }
     console.log('✅ Extraction successful. Proceeding to data retrieval...');
 
-    // --- STEP 5: Download layers (Using the perfected Binary/URN logic) ---
+    // --- STEP 5: Download layers (Using the same S3-Direct method as part of new URN method) ---
     console.log('📥 Downloading layer data via URN...');
+    /* --- Seems like we're accidentally using post instead of get so reverting to get method that worked previously to see if that still works --
     const downloadRes = await axios.post(
         `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodeURIComponent(layersKey)}/signeds3download`,
         {},
         { headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' } }
     );
+    */
+    const downloadRes = await axios.get(
+        `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodeURIComponent(layersKey)}/signeds3download`,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
 
     const layersFile = await axios.get(downloadRes.data.url, { responseType: 'arraybuffer' });
     const layers = JSON.parse(Buffer.from(layersFile.data).toString());
     console.log(`📋 Found ${layers.length} layers:`, layers);
+    
 
     // --- STEP 6: Call AI for mappings ---
     console.log('🤖 Calling AI for layer mappings...');
