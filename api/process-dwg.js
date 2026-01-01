@@ -3,6 +3,7 @@
 const axios = require('axios');
 const fs = require('fs').promises;
 const path = require('path');
+const crypto = require('crypto');
 
 const CLIENT_ID = process.env.APS_CLIENT_ID;
 const CLIENT_SECRET = process.env.APS_CLIENT_SECRET;
@@ -255,7 +256,13 @@ module.exports = async (req, res) => {
 
     // Step 3: Create Object URN for outputs after generating unique layersKey for retrieving later
     //         Switched from URL to URN method which seems more modern and better supported; avoids uploadKey hand-offs etc.
-    const layersKey = `layers-${Date.now()}.json`;   
+    
+    //-- Trying to create a more unique layers.json per client than just timestamp based
+    //const layersKey = `layers-${Date.now()}.json`;   
+    // Generate a 6-character random hex string
+    const uniqueId = crypto.randomBytes(3).toString('hex'); 
+    const layersKey = `layers-${Date.now()}-${uniqueId}.json`;
+
     console.log('📥 Extracting layers via Design Automation to: ', layersKey, " ...");
     const objectUrn = `urn:adsk.objects:os.object:${bucketKey}/${encodeURIComponent(layersKey)}`;
 
@@ -277,9 +284,6 @@ module.exports = async (req, res) => {
 
     if (workItemResult.status === 'success') {
       console.log('🏁 Job success. Waiting for OSS to index the file...');
-    
-      // Wait 2 seconds for the URN to become "Live" in the bucket
-      //await new Promise(resolve => setTimeout(resolve, 2000)); -- not sure we need this anymore since DL call hanging was from something else
 
       // Download using the same S3-Direct method as part of new URN method
       const downloadData = await axios.get(
