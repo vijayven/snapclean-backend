@@ -606,6 +606,12 @@ module.exports = async (req, res) => {
 
       console.log('📄 Extracted Layers:', layersData);
 
+      // Instead of just 'return', use the response object which is the "Clean Exit" for Vercel
+      return res.status(200).json({
+          success: true,
+          layers: layersData,
+          message: "Extraction complete"
+      });
       return finalFile.data;
     } 
     else {
