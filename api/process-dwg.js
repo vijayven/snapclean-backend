@@ -591,6 +591,7 @@ module.exports = async (req, res) => {
           { headers: { Authorization: `Bearer ${accessToken}` } }
       );
         
+      console.log('Download URL response:', JSON.stringify(downloadData.data, null, 2));
       const finalFile = await axios.get(downloadData.data.url);
       return finalFile.data;
     } 
