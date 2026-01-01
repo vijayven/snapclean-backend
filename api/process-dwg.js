@@ -541,7 +541,7 @@ module.exports = async (req, res) => {
 
     // No need to call startS3Upload or getSignedUploadUrl anymore!
     // Create an Object URN (Standard format for APS)
-    const objectUrn = `urn:adsk.objects:os.object:${bucketKey}/${encodeURIComponent(objectKey)}`;
+    const objectUrn = `urn:adsk.objects:os.object:${bucketKey}/${encodeURIComponent(layersKey)}`;
 
     const extractArgs = {
         inputFile: { url: dwgUrl },
