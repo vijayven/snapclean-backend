@@ -592,7 +592,20 @@ module.exports = async (req, res) => {
       );
         
       console.log('Download URL response:', JSON.stringify(downloadData.data, null, 2));
-      const finalFile = await axios.get(downloadData.data.url);
+      // Axios seems to be messing up download file so trying "arraybuffer" method 
+      //const finalFile = await axios.get(downloadData.data.url);
+      console.log('✅ Download URL received. Fetching raw content...');
+
+      const finalFile = await axios.get(downloadData.data.url, {
+          responseType: 'arraybuffer', // Tells Axios: "Just give me the bytes"
+          decompress: false            // Prevents Axios from trying to unzip the stream
+      });
+
+      // Convert the buffer back to a JSON object
+      const layersData = JSON.parse(Buffer.from(finalFile.data).toString());
+
+      console.log('📄 Extracted Layers:', layersData);
+
       return finalFile.data;
     } 
     else {
