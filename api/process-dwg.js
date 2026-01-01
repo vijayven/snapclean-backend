@@ -282,6 +282,8 @@ module.exports = async (req, res) => {
     
     console.log('✅ Layers extracted!');
 
+    /* --- START: 1/1/2026: Alt flow to proceed with post layer extraction logic now that layer extraction was finally proven out with URN method
+
     if (workItemResult.status === 'success') {
       console.log('🏁 Job success. Waiting for OSS to index the file...');
 
@@ -320,131 +322,77 @@ module.exports = async (req, res) => {
       console.error('❌ WorkItem Failed:', workItemResult.reportUrl);
       throw new Error('Design Automation Job Failed');
     }
+    //--- MID: 1/1/2026: Alt flow to proceed with post layer extraction logic now that layer extraction was finally proven out with URN method ---*/
+    // --- STEP 4: Poll and Guard ---
+    // (Assuming workItemResult is the object returned from your polling loop)
+    if (workItemResult.status !== 'success') {
+        throw new Error(`Extraction WorkItem failed with status: ${workItemResult.status}. Details: ${JSON.stringify(workItemResult.reportConfidential || workItemResult.stats)}`);
+    }
+    console.log('✅ Extraction successful. Proceeding to data retrieval...');
 
-    // Step 5: Download layers
-    
-   // After WorkItem completes
-    console.log('🔍 Original layersKey:', layersKey);
-
-    // Try to download -- DEBUG
-    console.log('📥 Attempting download with key:', layersKey);
-    /*
-
-    const layersDownloadResp = await axios.get(
-      `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodeURIComponent(layersKey)}/signeds3download`,
-      { headers: { Authorization: `Bearer ${accessToken}` } }
+    // --- STEP 5: Download layers (Using the perfected Binary/URN logic) ---
+    console.log('📥 Downloading layer data via URN...');
+    const downloadRes = await axios.post(
+        `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/${encodeURIComponent(layersKey)}/signeds3download`,
+        {},
+        { headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' } }
     );
 
-    const layersResp = await axios.get(layersDownloadResp.data.url, {
-      responseType: 'json'
-    });
+    const layersFile = await axios.get(downloadRes.data.url, { responseType: 'arraybuffer' });
+    const layers = JSON.parse(Buffer.from(layersFile.data).toString());
+    console.log(`📋 Found ${layers.length} layers:`, layers);
 
-    const layers = layersResp.data;
-    console.log(`✅ Found ${layers.length} layers:`, layers);
-    */
-
-    console.log('📊 Parsing report for S3 upload URL...');
-    const reportResp = await axios.get(workItemResult.reportUrl);
-    const reportText = reportResp.data;
-
-    /*
-    const uploadMatch = reportText.match(/Uploading '.*?layers\.json'.*?url - '([^']+)'/s);
-    if (uploadMatch) {
-      let s3Url = uploadMatch[1];
-      console.log('📤 Found S3 upload URL:', s3Url);
-      
-      // The upload URL can be converted to a download URL by removing query params and using GET
-      // S3 URLs are accessible without auth for a limited time
-      console.log('🔄 Attempting direct S3 download...');
-      
-      try {
-        const layersResp = await axios.get(s3Url, {
-          responseType: 'json',
-          timeout: 10000
-        });
-        
-        const layers = layersResp.data;
-        console.log(`✅ SUCCESS! Found ${layers.length} layers:`, layers);
-        
-        // SUCCESS - use this data
-        return res.json({
-          success: true,
-          message: 'Layer extraction complete',
-          layers: layers,
-          layersCount: layers.length
-        });
-      } catch (e) {
-        console.log('❌ Direct S3 download failed:', e.response?.status, e.message);
-      }
-    }
-    */
-    const uploadMatch = reportText.match(/signed-url-uploads\/([a-f0-9-]+)/);
-    if (uploadMatch) {
-      const uuid = uploadMatch[1];
-      console.log('🔑 Extracted UUID:', uuid);
-      
-      const listResp = await axios.get(
-        `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects?startsAt=signed-url-uploads/${uuid}`,
-        { headers: { Authorization: `Bearer ${accessToken}` } }
-      );
-      console.log('📦 Found objects:', listResp.data.items);
-    }
-
-    // EXIT HERE FOR NOW - test extraction first
-    return res.json({
-      success: true,
-      message: 'Layer extraction test complete',
-      layers: layers,
-      layersCount: layers.length
-    });
-    
-    // Step 6: Call Claude for mappings
-    console.log('🤖 Calling Claude API for layer mappings...');
-    //-- const mappingCSV = await callClaudeAPI(layers); -- Can change to Claude when you get Claude API key
+    // --- STEP 6: Call AI for mappings ---
+    console.log('🤖 Calling AI for layer mappings...');
     const mappingCSV = await callOpenAIAPI(layers);
-    console.log('✅ Got mappings from Claude');
-    console.log('Mappings:', mappingCSV);
+    
+    if (!mappingCSV || mappingCSV.trim().length === 0) {
+        console.log('ℹ️ No layer renaming needed.');
+        return res.json({ success: true, originalLayers: layers, message: 'All layers follow standards' });
+    }
+    console.log('✅ Got mappings:', mappingCSV);
 
-    // Check if there are any mappings to apply
-    if (!mappingCSV || mappingCSV.length === 0) {
-      console.log('ℹ️  No layer renaming needed');
-      return res.json({
+    // --- STEP 7: Upload mapping CSV (Using URN/Direct-S3 for consistency) ---
+    const mappingKey = `mapping-${Date.now()}-${crypto.randomBytes(3).toString('hex')}.csv`;
+    const mappingUrn = `urn:adsk.objects:os.object:${bucketKey}/${encodeURIComponent(mappingKey)}`;
+    
+    console.log('📤 Uploading mapping file...');
+    // We reuse our direct upload logic here to ensure it's in the bucket for the next WorkItem
+    await uploadToOSS(accessToken, bucketKey, mappingKey, Buffer.from(mappingCSV));
+    console.log('✅ Mapping uploaded as:', mappingKey);
+
+    // --- STEP 8: Rename layers (Applying the URN fix here too) ---
+    const finalDwgKey = `renamed-${Date.now()}-${crypto.randomBytes(3).toString('hex')}.dwg`;
+    const finalDwgUrn = `urn:adsk.objects:os.object:${bucketKey}/${encodeURIComponent(finalDwgKey)}`;
+
+    console.log('✏️ Renaming layers via Design Automation...');
+    const renameWorkItem = await runWorkItem(accessToken, 'RenameLayersActivity', {
+        inputFile: {
+            url: dwgUrl, // The original input DWG
+            headers: { Authorization: `Bearer ${accessToken}` }
+        },
+        mappingFile: {
+            url: mappingUrn, // The URN for the CSV we just uploaded
+            headers: { Authorization: `Bearer ${accessToken}` }
+        },
+        outputFile: {
+            verb: 'put',
+            url: finalDwgUrn, // Using URN so DA "completes" the file for us
+            headers: { Authorization: `Bearer ${accessToken}` }
+        }
+    });
+
+    if (renameWorkItem.status !== 'success') {
+        throw new Error(`Rename WorkItem failed: ${renameWorkItem.status}`);
+    }
+
+    // --- FINAL EXIT ---
+    res.json({
         success: true,
         originalLayers: layers,
-        mappings: 'No changes needed - all layers are standard',
-        message: 'All layers already follow standards'
-      });
-    }
-
-    // Step 7: Upload mapping CSV
-    console.log('📤 Uploading mapping file...');
-    await uploadToOSS(accessToken, bucketKey, `mapping-${Date.now()}.csv`, Buffer.from(mappingCSV));
-    console.log('✅ Mapping uploaded');
-
-    // Step 8: Rename layers
-    console.log('✏️  Renaming layers via Design Automation...');
-    await runWorkItem(accessToken, 'RenameLayersActivity', {
-      inputFile: {
-        url: dwgUrl,
-        headers: { Authorization: `Bearer ${accessToken}` }
-      },
-      mappingFile: {
-        url: `https://developer.api.autodesk.com/oss/v2/buckets/${bucketKey}/objects/mapping-${Date.now()}.csv`,
-        headers: { Authorization: `Bearer ${accessToken}` }
-      },
-      outputFile: {
-        verb: 'put',
-        url: dwgOutputUrl
-      }
-    });
-    console.log('✅ Layers renamed');
-
-    res.json({
-      success: true,
-      originalLayers: layers,
-      mappings: mappingCSV,
-      outputUrl: dwgOutputUrl,
-      message: 'DWG processed successfully'
+        mappings: mappingCSV,
+        outputFileKey: finalDwgKey,
+        message: 'DWG processed and renamed successfully'
     });
 
   } catch (error) {
