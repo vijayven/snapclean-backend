@@ -23,8 +23,9 @@ async function getAccessToken() {
   return response.data.access_token;
 }
 
-
-async function createActivity(activityName, bundleName, params) {
+//-- Refactoring createActivity() to accept dynamic .lsp files as scriptName
+//async function createActivity(activityName, bundleName, params) {
+async function createActivity(activityName, bundleName, scriptName, params) {
   const accessToken = await getAccessToken();
   const activityId = `${NICKNAME}.${activityName}+prod`;
   //const fullActivityName = `${NICKNAME}.${activityName}`;
@@ -53,7 +54,9 @@ async function createActivity(activityName, bundleName, params) {
       //],
       // Modified CommandLine to autoload lsp file:
       commandLine: [
-        `$(engine.path)\\accoreconsole.exe /i "$(args[inputFile].path)" /al "$(appbundles[${bundleName}].path)\\Contents\\extract-layers.lsp" /s "$(appbundles[${bundleName}].path)\\Contents\\run.scr"`
+        //-- Accepting dynamic script names for .lsp files only via scriptName
+        //`$(engine.path)\\accoreconsole.exe /i "$(args[inputFile].path)" /al "$(appbundles[${bundleName}].path)\\Contents\\extract-layers.lsp" /s "$(appbundles[${bundleName}].path)\\Contents\\run.scr"`
+        `$(engine.path)\\accoreconsole.exe /i "$(args[inputFile].path)" /al "$(appbundles[${bundleName}].path)\\Contents\\${scriptName}" /s "$(appbundles[${bundleName}].path)\\Contents\\run.scr"`
       ],
       engine: 'Autodesk.AutoCAD+25_0',
       appbundles: [`${NICKNAME}.${bundleName}+prod`],
@@ -95,7 +98,9 @@ async function createActivity(activityName, bundleName, params) {
 async function main() {
   try {
     // Activity 1: Extract Layers
-    await createActivity('ExtractLayersActivity', 'ExtractLayers', {
+    //-- Refactoring createActivity() to accept dynamic .lsp files as scriptName param
+    //await createActivity('ExtractLayersActivity', 'ExtractLayers', {
+    await createActivity('ExtractLayersActivity', 'ExtractLayers', 'extract-layers.lsp', {
       inputFile: {
         verb: 'get',
         description: 'Input DWG file',
@@ -111,7 +116,9 @@ async function main() {
     });
 
     // Activity 2: Rename Layers
-    await createActivity('RenameLayersActivity', 'RenameLayers', {
+    //-- Refactoring createActivity() to accept dynamic .lsp files as scriptName param
+    //await createActivity('RenameLayersActivity', 'RenameLayers', {
+    await createActivity('RenameLayersActivity', 'RenameLayers', 'rename-layers.lsp', {
       inputFile: {
         verb: 'get',
         description: 'Input DWG file',

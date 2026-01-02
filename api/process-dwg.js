@@ -371,23 +371,30 @@ module.exports = async (req, res) => {
     // --- STEP 8: Rename layers (Applying the URN fix here too) ---
     const finalDwgKey = `renamed-${Date.now()}-${crypto.randomBytes(3).toString('hex')}.dwg`;
     const finalDwgUrn = `urn:adsk.objects:os.object:${bucketKey}/${encodeURIComponent(finalDwgKey)}`;
+    const dwgUrn = `urn:adsk.objects:os.object:${bucketKey}/${encodeURIComponent(objectKey)}`;
 
     console.log('✏️ Renaming layers via Design Automation...');
+
     const renameWorkItem = await runWorkItem(accessToken, 'RenameLayersActivity', {
         inputFile: {
-            url: dwgUrl, // The original input DWG
-            headers: { Authorization: `Bearer ${accessToken}` }
+            //url: dwgUrl, // This is a signed S3 URL for the original input DWG; NO Authorization header here since it already has S3 query params 
+            url: dwgUrn, // Using URN instead of URL here
+            localName: 'input.dwg',
+            headers: { Authorization: `Bearer ${accessToken}` } // REQUIRED for URN
         },
         mappingFile: {
-            url: mappingUrn, // The URN for the CSV we just uploaded
-            headers: { Authorization: `Bearer ${accessToken}` }
+            url: mappingUrn, // This is a URN (urn:adsk.objects...) for the CSV we just uploaded
+            headers: { Authorization: `Bearer ${accessToken}` }, // REQUIRED for URNs 
+            localName: 'mapping.csv'
         },
         outputFile: {
             verb: 'put',
             url: finalDwgUrn, // Using URN so DA "completes" the file for us
-            headers: { Authorization: `Bearer ${accessToken}` }
+            headers: { Authorization: `Bearer ${accessToken}` }, // REQUIRED for URNs 
+            localName: 'output.dwg'
         }
     });
+
 
     if (renameWorkItem.status !== 'success') {
         throw new Error(`Rename WorkItem failed: ${renameWorkItem.status}`);
